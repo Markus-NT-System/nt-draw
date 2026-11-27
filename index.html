@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NT Ritverktyg – profiler</title>
+<style>
+:root{--bg:#f4f2ee;--panel:#fff;--line:#dedad2;--ink:#1d2733;--mut:#6b7380;--acc:#1660c0;--acc2:#e8f0fb;--wood:#efe3cf;}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+header{height:50px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:15px;margin:0 12px 0 0;white-space:nowrap}
+.tabs{display:flex;gap:2px;background:#ece9e3;border-radius:8px;padding:3px}
+.tabs button{border:0;background:transparent;padding:5px 12px;border-radius:6px;cursor:pointer}
+.tabs button.on{background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12);font-weight:600}
+.sp{flex:1}
+.btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 10px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:#b9b3a8}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+main{display:flex;height:calc(100% - 50px)}
+aside{background:var(--panel);overflow:auto;padding:10px 12px 20px}
+#left{width:340px;border-right:1px solid var(--line)}
+#right{width:270px;border-left:1px solid var(--line)}
+h2{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:16px 0 6px}
+h2:first-child{margin-top:4px}
+.row{display:flex;gap:6px;align-items:center;margin:4px 0;flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:6px 10px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--acc);color:#fff}
+label.f{display:block;margin:5px 0 2px;color:var(--mut);font-size:11.5px}
+input[type=text],input[type=number],select,textarea{border:1px solid var(--line);border-radius:6px;padding:4px 6px;background:#fff;width:100%}
+textarea{resize:vertical;min-height:46px}
+.small{font-size:11.5px;color:var(--mut)}
+table.segs{width:100%;border-collapse:collapse;margin-top:4px}
+table.segs th{font-size:10.5px;color:var(--mut);font-weight:500;text-align:left;padding:2px 2px;border-bottom:1px solid var(--line)}
+table.segs td{padding:2px 2px;border-bottom:1px solid #f0ede7;vertical-align:middle}
+table.segs td.num{color:var(--mut);width:30px;white-space:nowrap;text-align:right;padding-right:4px}
+table.segs input{width:100%;padding:3px 4px;border:1px solid var(--line);border-radius:5px;text-align:right}
+table.segs input:disabled{background:#f6f4f0;color:var(--mut)}
+table.segs tr.sel td{background:var(--acc2)}
+table.segs tr:hover td{background:#f7f5f1}
+table.segs tr.sel:hover td{background:var(--acc2)}
+.dircell{display:flex;align-items:center;gap:3px}
+.arrow{display:inline-block;width:14px;text-align:center;color:var(--acc);font-weight:700}
+.x{border:0;background:transparent;color:#a33;cursor:pointer;font-size:15px;padding:0 4px}
+.autolbl{font-size:10px;color:var(--mut);border:1px solid var(--line);border-radius:4px;padding:0 3px}
+.dirs{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-top:4px}
+.dirs button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 0;cursor:pointer;font-size:14px}
+.dirs button:hover{border-color:var(--acc);color:var(--acc)}
+#stage{flex:1;position:relative;min-width:0}
+#drawView,#sheetView{position:absolute;inset:0}
+#cv{width:100%;height:100%;display:block;background:#fbfaf8;touch-action:none;user-select:none}
+#cv .dt{cursor:pointer}
+#cv .dt:hover{fill:#c2410c}
+#hud{position:absolute;pointer-events:none;background:rgba(29,39,51,.92);color:#fff;padding:3px 7px;border-radius:5px;font-size:12px;white-space:nowrap;display:none}
+#legend{position:absolute;left:12px;top:10px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:7px;padding:5px 9px;font-size:12px;display:none}
+#legend span{display:inline-flex;align-items:center;gap:4px;margin-right:10px}
+#legend i{display:inline-block;width:16px;height:16px;border-radius:50%;border:2px solid;font-style:normal;font-weight:700;font-size:10px;text-align:center;line-height:13px;background:#fff}
+#ctx{position:absolute;display:none;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:4px;min-width:190px;z-index:8}
+#ctx .h{font-size:11px;color:var(--mut);padding:4px 8px}
+#ctx button{display:flex;align-items:center;gap:8px;width:100%;border:0;background:transparent;text-align:left;padding:6px 8px;border-radius:5px;cursor:pointer}
+#ctx button:hover{background:#f2efe9}
+#ctx button .ck{width:12px;color:var(--acc)}
+#ctx .angrow{display:flex;align-items:center;gap:6px;padding:2px 8px 4px}
+#ctx .angrow input{width:64px;padding:3px 5px;border:1px solid var(--line);border-radius:5px;text-align:right}
+#ctx .btn{display:inline-block;width:auto;border:1px solid var(--line);background:#fff;padding:5px 12px;border-radius:7px}
+#ctx .btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+#ctx .btn:hover{background:#f2efe9}
+#ctx .btn.pri:hover{background:#1352a8}
+#ctx .gf{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:2px 8px 6px}
+#ctx .gf label{font-size:11px;color:var(--mut);display:flex;flex-direction:column;gap:2px}
+#ctx .gf input{width:100%;padding:3px 5px;border:1px solid var(--line);border-radius:5px;text-align:right}
+#ctx hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.krow{display:grid;grid-template-columns:24px 1fr 58px;gap:4px;align-items:center;margin:3px 0}
+.krow span{font-size:11.5px;color:var(--mut)}
+.krow input{padding:3px 5px}
+.khead span{font-size:10.5px}
+#hint{position:absolute;left:12px;bottom:10px;right:12px;color:var(--mut);font-size:12px;pointer-events:none}
+#zoombar{position:absolute;right:12px;top:10px;display:flex;gap:4px}
+#sheetView{overflow:auto;display:flex;align-items:center;justify-content:center;padding:18px;background:#e7e4de}
+#sheet{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18);width:min(100%,calc((100vh - 90px) * 1.4143));height:auto}
+#dimEdit{position:absolute;display:none;width:84px;padding:3px 5px;border:2px solid var(--acc);border-radius:6px;text-align:center;font-weight:600;z-index:5}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:8px;display:none;z-index:30;max-width:80vw}
+#modal{position:fixed;inset:0;background:rgba(20,24,30,.35);display:none;align-items:center;justify-content:center;z-index:20}
+#modal .box{background:#fff;border-radius:10px;padding:18px;width:360px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+#modal .box p{margin:0 0 14px}
+.drafts{list-style:none;margin:6px 0 0;padding:0}
+.drafts li{display:flex;align-items:center;gap:4px;padding:4px 0;border-bottom:1px solid #f0ede7}
+.drafts li span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drafts li small{color:var(--mut)}
+.chk{display:flex;align-items:center;gap:6px;margin:3px 0}
+.kbd{font-family:ui-monospace,monospace;background:#f0ede7;border-radius:4px;padding:0 4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>NT Ritverktyg</h1>
+  <div class="tabs"><button id="tabDraw" class="on">Rita</button><button id="tabSheet">Ritningsblad A4</button></div>
+  <button class="btn" id="undo" title="Ångra (Ctrl+Z)">↶ Ångra</button>
+  <button class="btn" id="redo" title="Gör om (Ctrl+Y)">↷ Gör om</button>
+  <div class="sp"></div>
+  <button class="btn pri" id="expPdf">Spara PDF</button>
+  <button class="btn" id="expSvg">SVG</button>
+  <button class="btn" id="expPng" title="Ritningsbladet som bild (300 dpi)">PNG</button>
+  <button class="btn" id="expJson" title="Ritningsdata som kan läsas in igen (och senare sparas i NT-systemet)">JSON</button>
+  <label class="btn" title="Läs in en JSON-ritning">Öppna JSON<input type="file" id="impJson" accept=".json,application/json" hidden></label>
+</header>
+<main>
+  <aside id="left">
+    <h2>Verktyg</h2>
+    <div class="row">
+      <div class="seg" id="tools">
+        <button data-t="draw" title="Rita (D)">✎ Rita</button>
+        <button data-t="select" title="Markera / flytta hörn (V)">⬚ Markera</button>
+        <button data-t="pan" title="Panorera (H, eller håll mellanslag)">✥ Panorera</button>
+      </div>
+    </div>
+    <div class="row">
+      <span class="small" style="width:70px">Vinkelsnäpp</span>
+      <select id="snapA" style="width:auto"><option value="90">90°</option><option value="45">45°</option><option value="15" selected>15°</option><option value="5">5°</option><option value="1">1°</option><option value="0">Fri</option></select>
+      <span class="small">Längd</span>
+      <select id="snapL" style="width:auto"><option value="0.1">0,1 mm</option><option value="0.5">0,5 mm</option><option value="1" selected>1 mm</option><option value="5">5 mm</option><option value="10">10 mm</option></select>
+    </div>
+
+    <h2>Måttsättning (automatisk)</h2>
+    <select id="dimStyle">
+      <option value="chain">Kedjemått + totalmått (rekommenderat)</option>
+      <option value="sides">Mått på varje sida</option>
+    </select>
+    <label class="chk"><input type="checkbox" id="dimAng" checked> Visa vinklar på sneda sidor</label>
+    <label class="chk"><input type="checkbox" id="dimTot" checked> Visa totalmått</label>
+    <label class="chk"><input type="checkbox" id="dimRad" checked> Visa radier och faser</label>
+    <div class="row" id="hidRow" style="display:none"><span class="small" id="hidInfo"></span><button class="btn" id="hidAll">Visa alla</button></div>
+    <label class="chk" title="Yttermåtten (bredd × höjd) ändras inte när du flyttar linjer eller ändrar inre mått"><input type="checkbox" id="lockBox"> 🔒 Lås yttermått&nbsp;<span id="lockInfo" class="small"></span></label>
+    <div class="small">Klicka på ett mått för att ändra det. Högerklicka på ett mått för att dölja eller visa det.</div>
+
+    <h2>Sträckor</h2>
+    <div class="small" id="segInfo"></div>
+    <table class="segs">
+      <thead><tr><th></th><th>Riktning °</th><th>Längd</th><th title="Radie i hörnet där sträckan slutar. 2 = rundar utåt, -2 = rundar in i träet">R ±</th><th title="Fas i hörnet där sträckan slutar (mm). Tomt = ingen fas">Fas</th><th></th></tr></thead>
+      <tbody id="segBody"></tbody>
+    </table>
+    <div class="small" style="margin-top:4px">R: <b>2</b> = hörnet rundas utåt, <b>-2</b> = rundas in i träet.</div>
+    <div class="row" style="margin-top:8px">
+      <span class="small">Ny sträcka:</span>
+      <input type="text" id="newLen" placeholder="längd mm" style="width:90px">
+      <span class="small">klicka riktning ↓</span>
+    </div>
+    <div class="dirs" id="dirs">
+      <button data-a="0" title="Höger">→</button><button data-a="45">↗</button><button data-a="90" title="Upp">↑</button><button data-a="135">↖</button>
+      <button data-a="180" title="Vänster">←</button><button data-a="225">↙</button><button data-a="270" title="Ned">↓</button><button data-a="315">↘</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" id="closeBtn">Stäng profilen</button>
+      <button class="btn" id="openBtn">Öppna profilen</button>
+      <button class="btn" id="clearBtn">Rensa</button>
+    </div>
+
+    <h2>Snabbstart</h2>
+    <div class="row">
+      <span class="small">Rektangel</span>
+      <input type="text" id="rectW" value="95" style="width:56px" title="Bredd">
+      <span>×</span>
+      <input type="text" id="rectH" value="21" style="width:56px" title="Höjd/tjocklek">
+      <button class="btn" id="rectBtn">Skapa</button>
+    </div>
+    <div class="row"><button class="btn" id="demoBtn">Exempel: spontad panel</button></div>
+  </aside>
+
+  <section id="stage">
+    <div id="drawView">
+      <svg id="cv" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="zoombar"><button class="btn" id="fitBtn" title="Anpassa vy (F)">⤢ Anpassa</button></div>
+      <div id="hud"></div>
+      <div id="legend"></div>
+      <div id="ctx"></div>
+      <div id="hint"></div>
+      <input id="dimEdit" type="text">
+    </div>
+    <div id="sheetView" hidden>
+      <svg id="sheet" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 297 210" width="297mm" height="210mm"></svg>
+    </div>
+  </section>
+
+  <aside id="right">
+    <h2>Ritningsblad</h2>
+    <label class="chk"><input type="checkbox" id="shMirror"> Visa vänd 180°</label>
+    <label class="f">Montering – visa två bitar ihop</label>
+    <select id="shMont"><option value="">Nej</option><option value="x">Två bitar i sidled (t.ex. spont)</option><option value="y">Två bitar på höjden</option></select>
+    <div class="small">Påverkar bara ritningsbladet och PDF:en, inte ritningen.</div>
+
+    <h2>3D-utskrift</h2>
+    <div class="row" style="flex-wrap:nowrap"><span class="small" style="white-space:nowrap">Längd på biten</span><input type="text" id="prLen" value="50" style="width:70px"><span class="small">mm</span></div>
+    <button class="btn" id="prBtn" style="width:100%;margin-top:4px">Spara fil för 3D-skrivare</button>
+    <div class="small" id="prInfo" style="margin-top:4px">Profilen ligger ned på bordet med längden uppåt. Måtten är exakt ritningens, i millimeter.</div>
+
+    <h2>Titelblock</h2>
+    <label class="f">Benämning</label><input type="text" data-t="benamning">
+    <label class="f">Kund</label><input type="text" data-t="kund">
+    <label class="f">Förfrågan / order nr</label><input type="text" data-t="forfragan">
+    <label class="f">Material</label><input type="text" data-t="material" placeholder="t.ex. Furu, fingerskarvad">
+    <div class="row" style="flex-wrap:nowrap">
+      <div style="flex:1"><label class="f">Ritn.nr</label><input type="text" data-t="ritnr"></div>
+      <div style="width:60px"><label class="f">Rev</label><input type="text" data-t="rev"></div>
+    </div>
+    <div class="row" style="flex-wrap:nowrap">
+      <div style="flex:1"><label class="f">Ritad av</label><input type="text" data-t="ritadAv"></div>
+      <div style="flex:1"><label class="f">Datum</label><input type="text" data-t="datum"></div>
+    </div>
+    <label class="f">Fingerskarv (visas i 3D-vyn)</label>
+    <select id="finger"><option value="">Ingen</option><option value="vertikal">Vertikal – fingrarna syns på flatsidan</option><option value="horisontell">Horisontell – fingrarna syns på kanten</option></select>
+    <label class="f">Anmärkning</label><textarea data-t="anm" placeholder="t.ex. toleranser, ytbehandling"></textarea>
+
+    <h2>Kutterbestyckning</h2>
+    <label class="chk"><input type="checkbox" id="kShow"> Visa på ritningsbladet</label>
+    <div class="krow khead"><span></span><span>Verktyg</span><span>Schims</span></div>
+    <div class="krow"><span>K1</span><input type="text" data-k="0" data-kf="verktyg" placeholder="–"><input type="text" data-k="0" data-kf="schims" placeholder="–" title="Schims"></div><div class="krow"><span>K2</span><input type="text" data-k="1" data-kf="verktyg" placeholder="–"><input type="text" data-k="1" data-kf="schims" placeholder="–" title="Schims"></div><div class="krow"><span>K3</span><input type="text" data-k="2" data-kf="verktyg" placeholder="–"><input type="text" data-k="2" data-kf="schims" placeholder="–" title="Schims"></div><div class="krow"><span>K4</span><input type="text" data-k="3" data-kf="verktyg" placeholder="–"><input type="text" data-k="3" data-kf="schims" placeholder="–" title="Schims"></div><div class="krow"><span>K5</span><input type="text" data-k="4" data-kf="verktyg" placeholder="–"><input type="text" data-k="4" data-kf="schims" placeholder="–" title="Schims"></div><div class="krow"><span>K6</span><input type="text" data-k="5" data-kf="verktyg" placeholder="–"><input type="text" data-k="5" data-kf="schims" placeholder="–" title="Schims"></div><div class="krow"><span>K7</span><input type="text" data-k="6" data-kf="verktyg" placeholder="–"><input type="text" data-k="6" data-kf="schims" placeholder="–" title="Schims"></div><div class="krow"><span>K8</span><input type="text" data-k="7" data-kf="verktyg" placeholder="–"><input type="text" data-k="7" data-kf="schims" placeholder="–" title="Schims"></div>
+    <label class="f">Övrigt / maskininstruktioner</label><textarea id="kOvr"></textarea>
+
+    <h2>Utkast (i den här webbläsaren)</h2>
+    <div class="row"><button class="btn" id="saveDraft">Spara utkast</button><button class="btn" id="newDoc">Ny ritning</button></div>
+    <ul class="drafts" id="drafts"></ul>
+    <p class="small">Prototyp: utkast sparas bara lokalt i webbläsaren. I NT-systemet blir detta "Spara på förfrågan/ritning". Använd JSON eller PDF för att flytta ritningar.</p>
+  </aside>
+</main>
+
+<div id="modal"><div class="box"><p id="mText"></p><div class="row" style="justify-content:flex-end"><button class="btn" id="mNo">Avbryt</button><button class="btn pri" id="mYes">OK</button></div></div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ===================== Hjälpfunktioner ===================== */
+const $=s=>document.querySelector(s);
+const P2=(x,y)=>({x,y});
+const add=(a,b)=>P2(a.x+b.x,a.y+b.y), sub=(a,b)=>P2(a.x-b.x,a.y-b.y), mul=(a,k)=>P2(a.x*k,a.y*k);
+const dot=(a,b)=>a.x*b.x+a.y*b.y, crs=(a,b)=>a.x*b.y-a.y*b.x, len=a=>Math.hypot(a.x,a.y);
+const nrm=a=>{const l=len(a)||1;return P2(a.x/l,a.y/l)};
+const clamp1=v=>Math.max(-1,Math.min(1,v));
+const r6=v=>Math.round(v*1e6)/1e6;
+const angDeg=v=>{let a=Math.atan2(v.y,v.x)*180/Math.PI;if(a<0)a+=360;if(a>=359.9995)a=0;return a};
+function fmt(v){const r=Math.round(v*10)/10;const s=Math.abs(r-Math.round(r))<1e-9?String(Math.round(r)):r.toFixed(1);return (s==='-0'?'0':s).replace('.',',')}
+function num(s){if(s==null)return NaN;s=String(s).trim().replace(',','.');if(s==='')return NaN;return Number(s)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+const f3=v=>(Math.round(v*1000)/1000).toString();
+function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function toast(t,ms){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast._t);toast._t=setTimeout(()=>e.style.display='none',ms||2600)}
+function ask(text,yes){return new Promise(res=>{$('#mText').textContent=text;$('#mYes').textContent=yes||'OK';$('#modal').style.display='flex';
+  const done=v=>{$('#modal').style.display='none';$('#mYes').onclick=$('#mNo').onclick=null;res(v)};$('#mYes').onclick=()=>done(true);$('#mNo').onclick=()=>done(false);})}
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}}};
+
+/* ===================== Dokument ===================== */
+const KN=8;
+function newKutter(){return {show:false,rows:Array.from({length:KN},()=>({verktyg:'',schims:''})),ovrigt:''}}
+function newDoc(){return {version:1,pts:[],closed:false,lock:false,sheet:{mirror:false,mont:''},L:2400,finger:'',kutter:newKutter(),dim:{style:'chain',angles:true,totals:true,radii:true},hidden:[],
+  title:{benamning:'',kund:'',forfragan:'',material:'',ritadAv:'',datum:today(),ritnr:'',rev:'A',anm:''}}}
+function demoDoc(){const d=newDoc();
+  const pts=[[0,0],[114,0],[114,7],[120,7],[120,14],[114,14],[114,21],[0,21],[0,14],[6,14],[6,7],[0,7]];
+  d.pts=pts.map(p=>({x:p[0],y:p[1],r:0}));d.lock=true;d.pts[6].r=2;d.pts[7].c=3;d.pts[6].s='hyvlad';d.pts[0].s='rillad';d.closed=true;d.L=3000;
+  d.title.benamning='Spontad panel 21×120 (exempel)';
+  ['Spiralkutter','Spiralkutter','Fräs R4 NR: Bygg 45:1','','','Fräs R4 NR: Bygg 45:2','Ev. Klo R4','Ev. Klyvsats R4'].forEach((v,i)=>d.kutter.rows[i].verktyg=v);d.title.material='Furu';return d}
+let doc;
+let undoS=[],redoS=[];
+function beginChange(){undoS.push(JSON.stringify(doc));if(undoS.length>200)undoS.shift();redoS=[]}
+function changed(){enforceAngles();doc.pts.forEach(p=>{p.x=r6(p.x);p.y=r6(p.y)});renderAll();store.set('ntrit.current',JSON.stringify(doc))}
+function undo(){if(!undoS.length)return;redoS.push(JSON.stringify(doc));doc=JSON.parse(undoS.pop());clearSel();syncFields();changed()}
+function redo(){if(!redoS.length)return;undoS.push(JSON.stringify(doc));doc=JSON.parse(redoS.pop());syncFields();changed()}
+function validDoc(d){return d&&Array.isArray(d.pts)&&d.pts.every(p=>isFinite(p.x)&&isFinite(p.y))}
+function loadDoc(d){const base=newDoc();doc=Object.assign(base,d);doc.dim=Object.assign(newDoc().dim,d.dim||{});doc.title=Object.assign(newDoc().title,d.title||{});doc.sheet=Object.assign(newDoc().sheet,d.sheet||{});doc.hidden=Array.isArray(d.hidden)?d.hidden.map(k=>String(k).replace(/^b([xy])\d:/,'b$1:')):[];
+  {const k=newKutter(),dk=d.kutter||{};k.show=!!dk.show;k.ovrigt=String(dk.ovrigt||'');(dk.rows||[]).slice(0,KN).forEach((r,i)=>{k.rows[i]={verktyg:String(r&&r.verktyg||''),schims:String(r&&r.schims||'')}});doc.kutter=k}
+  doc.pts=doc.pts.map(p=>({gq:p.gq?1:undefined,av:p.av,x:+p.x,y:+p.y,r:+p.r||0,c:+p.c||0,s:SURF[p.s]?p.s:''}));clearSel();syncFields()}
+
+/* ===================== Ytor ===================== */
+/* Ytan hör till linjen som börjar i punkten: doc.pts[i].s gäller linjen i -> i+1 */
+const SURF={rillad:{name:'Rillad',k:'R'},paintcutter:{name:'Paintcutter',k:'P'},hyvlad:{name:'Hyvlad',k:'H'},finsagad:{name:'Finsågad',k:'F'}};
+function rnd(seed){let x=Math.sin(seed*12.9898+78.233)*43758.5453;return x-Math.floor(x)}
+/* Ytans struktur ritad längs linjen, på träsidan (nn pekar in i träet).
+   Rillad: sågtand (spår). Finsågad: grova, oregelbundna fiberstreck. Paintcutter: fina, täta streck. Hyvlad: bara linjen. */
+function surfTex(A,B,nn,kind,u,col,lw,seed){const L=len(sub(B,A));if(L<1e-6||kind==='hyvlad'||!SURF[kind])return '';const d=mul(sub(B,A),1/L);let o='';
+  const at=(t,h)=>add(add(A,mul(d,t)),mul(nn,h));const pt=q=>f3(q.x)+' '+f3(q.y);
+  if(kind==='rillad'){const pitch=1.6*u,h=0.75*u;const n=Math.max(1,Math.round(L/pitch)),p=L/n;let path='M'+pt(at(0,0));
+    for(let k=0;k<n;k++)path+='L'+pt(at((k+.5)*p,h))+'L'+pt(at((k+1)*p,0));
+    return `<path d="${path}" fill="none" stroke="${col}" stroke-width="${f3(lw)}" stroke-linejoin="miter"/>`}
+  const fine=kind==='paintcutter';const step=(fine?0.55:0.9)*u,hmin=(fine?0.25:0.35)*u,hmax=(fine?0.6:1.15)*u;let path='';let k=0;
+  for(let t=step*0.5;t<L-step*0.3;t+=step,k++){const j=(rnd(seed*97+k)-0.5)*step*0.6;const tt=Math.max(0,Math.min(L,t+j));const h=hmin+(hmax-hmin)*rnd(seed*31+k*7+3);
+    const tilt=(rnd(seed*53+k*11)-0.5)*0.5*u;path+='M'+pt(at(tt,0))+'L'+pt(add(at(tt,h),mul(d,tilt)))}
+  return `<path d="${path}" fill="none" stroke="${col}" stroke-width="${f3(lw*0.8)}" stroke-linecap="round"/>`}
+function surfTextures(P,closed,T,u,col,lw){let o='';const Q=closed?densePts(P,true).map(T):null;const fds=filletDs(P,closed);
+  edgesOf(P,closed).forEach(([a,b],i)=>{const sf=SURF[P[a].s];if(!sf)return;const fa=filletAt(P,closed,a,fds),fb=filletAt(P,closed,b,fds);
+    const A=T(fa?fa.T2:P[a]),B=T(fb?fb.T1:P[b]);const mid=mul(add(A,B),.5);const d=nrm(sub(B,A));let nn=P2(-d.y,d.x);
+    if(Q&&!pip(add(mid,mul(nn,1.5)),Q))nn=mul(nn,-1);o+=surfTex(A,B,nn,P[a].s,u,col,lw,i+1)});return o}
+function surfSample(x,y,w,kind,u,col,lw){/* liten provbit för förteckningen */
+  return `<line x1="${f3(x)}" y1="${f3(y)}" x2="${f3(x+w)}" y2="${f3(y)}" stroke="${col}" stroke-width="${f3(lw)}"/>`+surfTex(P2(x,y),P2(x+w,y),P2(0,1),kind,u,col,lw,7)}
+function usedSurf(){const u=new Set();edgesOf(doc.pts,doc.closed).forEach(([a])=>{if(SURF[doc.pts[a].s])u.add(doc.pts[a].s)});return Object.keys(SURF).filter(k=>u.has(k))}
+function surfMarkers(P,closed,T,u,color){/* bokstav i ring strax innanför linjens mitt */
+  let o='';const Q=closed?densePts(P,true).map(T):null;const r=1.75*u;
+  edgesOf(P,closed).forEach(([a,b])=>{const sf=SURF[P[a].s];if(!sf)return;const A=T(P[a]),B=T(P[b]);const mid=mul(add(A,B),.5);const d=nrm(sub(B,A));let nn=P2(-d.y,d.x);
+    if(Q&&!pip(add(mid,mul(nn,1.5)),Q))nn=mul(nn,-1);const c=add(mid,mul(nn,r+1.1*u));const col=color||'#1d2733';
+    o+=`<circle cx="${f3(c.x)}" cy="${f3(c.y)}" r="${f3(r)}" fill="#fff" stroke="${col}" stroke-width="${f3(0.22*u)}"/>`+
+      `<text x="${f3(c.x)}" y="${f3(c.y+0.8*u)}" font-size="${f3(2.3*u)}" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="${col}" text-anchor="middle">${sf.k}</text>`});
+  return o}
+
+/* ===================== Geometri ===================== */
+function edgesOf(P,closed){const n=P.length,m=closed?n:n-1,out=[];for(let i=0;i<m;i++)out.push([i,(i+1)%n]);return out}
+function cornerAngle(P,closed,j){const n=P.length;if(n<3||(!closed&&(j===0||j===n-1)))return null;
+  const A=P[(j-1+n)%n],V=P[j],B=P[(j+1)%n];const th=Math.acos(clamp1(dot(nrm(sub(A,V)),nrm(sub(B,V)))));return (th<0.01||th>Math.PI-0.01)?null:th}
+function filletDs(P,closed){/* hur långt varje radie når längs sidorna; delar på sidan bara om båda ändarna har radie */
+  const n=P.length,d=P.map((p,j)=>{const th=cornerAngle(P,closed,j);return !th?0:(p.r?Math.abs(p.r)/Math.tan(th/2):(p.c>0?p.c:0))});
+  edgesOf(P,closed).forEach(([a,b])=>{const L=len(sub(P[b],P[a]));if(d[a]+d[b]>L&&d[a]+d[b]>0){const k=L/(d[a]+d[b]);d[a]=Math.min(d[a],d[a]*k);d[b]=Math.min(d[b],d[b]*k)}});
+  return d}
+function filletAt(P,closed,j,ds){
+  /* r>0: hörnet rundas utåt (bågen buktar ut ur träet). r<0: bågen buktar in i träet (hålkäl / urfräst hörn). */
+  /* c>0 (utan r): fas – hörnet kapas c mm längs båda sidorna */
+  const n=P.length,rr=P[j].r||0,cc=P[j].c||0;if(!rr&&!(cc>0))return null;const th=cornerAngle(P,closed,j);if(!th)return null;
+  const A=P[(j-1+n)%n],V=P[j],B=P[(j+1)%n];const u1=nrm(sub(A,V)),u2=nrm(sub(B,V));
+  const d=(ds||filletDs(P,closed))[j];
+  if(!rr){if(d<1e-6)return null;return {chamfer:true,T1:add(V,mul(u1,d)),T2:add(V,mul(u2,d)),c:d,th,clamped:d<cc-0.005}}const r=d*Math.tan(th/2);if(r<1e-6)return null;
+  const bis=nrm(add(u1,u2));let C=add(V,mul(bis,r/Math.sin(th/2)));
+  const T1=add(V,mul(u1,d)),T2=add(V,mul(u2,d));const turn=crs(sub(V,A),sub(B,V));
+  const orient=closed?Math.sign(area(P))||1:1;const convex=turn*orient>0;
+  let sweep=turn>0?0:1;
+  if((rr>0)!==convex){C=sub(add(T1,T2),C);sweep=1-sweep}/* spegla bågen över kordan */
+  return {T1,T2,C,r,turn,sweep,inward:rr<0,clamped:r<Math.abs(rr)-0.005}
+}
+function outlinePath(P,closed,T,k){
+  const n=P.length;if(n<2)return '';const ds=filletDs(P,closed);const F=P.map((_,j)=>filletAt(P,closed,j,ds));
+  const pt=p=>{const q=T(p);return f3(q.x)+' '+f3(q.y)};
+  const emit=j=>{const f=F[j];if(!f)return 'L'+pt(P[j]);if(f.chamfer)return 'L'+pt(f.T1)+'L'+pt(f.T2);const rr=f3(f.r*k);return 'L'+pt(f.T1)+'A'+rr+' '+rr+' 0 0 '+f.sweep+' '+pt(f.T2)};
+  if(!closed){let d='M'+pt(P[0]);for(let j=1;j<n;j++)d+=emit(j);return d}
+  let d='M'+pt(F[0]?F[0].T2:P[0]);for(let j=1;j<n;j++)d+=emit(j);return d+emit(0)+'Z'
+}
+function densePts(P,closed){const n=P.length,out=[];const ds=filletDs(P,closed);
+  for(let j=0;j<n;j++){const f=filletAt(P,closed,j,ds);if(!f){out.push({x:P[j].x,y:P[j].y,inter:false,vj:j});continue}
+    if(f.chamfer){out.push({x:f.T1.x,y:f.T1.y,inter:false,vj:j,cf:1},{x:f.T2.x,y:f.T2.y,inter:false,vj:j,cf:2});continue}
+    const a1=Math.atan2(f.T1.y-f.C.y,f.T1.x-f.C.x),a2=Math.atan2(f.T2.y-f.C.y,f.T2.x-f.C.x);
+    let da=a2-a1;while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
+    const N=10;for(let s=0;s<=N;s++){const a=a1+da*s/N;out.push({x:f.C.x+f.r*Math.cos(a),y:f.C.y+f.r*Math.sin(a),inter:s>0&&s<N,vj:j})}}
+  return out}
+function bbox(Q){let a=Infinity,b=Infinity,c=-Infinity,d=-Infinity;Q.forEach(q=>{a=Math.min(a,q.x);b=Math.min(b,q.y);c=Math.max(c,q.x);d=Math.max(d,q.y)});return {minX:a,minY:b,maxX:c,maxY:d}}
+function pip(p,Q){let ins=false;for(let i=0,j=Q.length-1;i<Q.length;j=i++){const a=Q[i],b=Q[j];if(((a.y>p.y)!==(b.y>p.y))&&(p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x))ins=!ins}return ins}
+function area(P){let s=0;for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length];s+=a.x*b.y-b.x*a.y}return s/2}
+function extentAt(P,closed,axis,v){let lo=Infinity,hi=-Infinity;const c=p=>axis==='x'?p.x:p.y,o=p=>axis==='x'?p.y:p.x;
+  for(const [i,j] of edgesOf(P,closed)){const a=P[i],b=P[j],ca=c(a),cb=c(b);
+    if(v<Math.min(ca,cb)-1e-6||v>Math.max(ca,cb)+1e-6)continue;
+    if(Math.abs(cb-ca)<1e-9){lo=Math.min(lo,o(a),o(b));hi=Math.max(hi,o(a),o(b))}
+    else{const t=(v-ca)/(cb-ca),y=o(a)+t*(o(b)-o(a));lo=Math.min(lo,y);hi=Math.max(hi,y)}}
+  return [lo,hi]}
+function uniqSorted(a,eps){a=a.slice().sort((x,y)=>x-y);const o=[];a.forEach(v=>{if(!o.length||v-o[o.length-1]>eps)o.push(v)});return o}
+
+/* ===================== Automatisk måttsättning =====================
+   Allt räknas i SVG-koordinater (efter transform T), värden från modellen (mm). u = "pappers-mm" i SVG-enheter. */
+function genDims(P,closed,T,u,opt){opt=Object.assign({hidden:doc.hidden||[]},opt);
+  const out={lins:[],angs:[],rads:[],chams:[]};if(P.length<2)return out;
+  const Q=P.map(T);const bb=bbox(Q);const off1=9*u,step=7*u;
+  const off=l=>off1+l*step;
+  const kp=p=>f3(p.x)+','+f3(p.y);
+  if(opt.style==='sides')sideDims();else{chain('x');chain('y')}
+  if(opt.angles)angleDims();
+  if(opt.radii!==false)radDims();
+  return out;
+
+  function chain(axis){
+    const c=p=>axis==='x'?p.x:p.y,o=p=>axis==='x'?p.y:p.x;
+    const vals=uniqSorted(P.map(c),0.01);if(vals.length<2)return;
+    const info=vals.map(v=>{const idx=[];P.forEach((p,i)=>{if(Math.abs(c(p)-v)<0.01)idx.push(i)});
+      const [lo,hi]=extentAt(P,closed,axis,v);let mn=idx[0],mx=idx[0];
+      idx.forEach(i=>{if(o(P[i])<o(P[mn]))mn=i;if(o(P[i])>o(P[mx]))mx=i});
+      return {v,mn,mx,lowVis:o(P[mn])<=lo+0.01,highVis:o(P[mx])>=hi-0.01}});
+    const primLow=axis==='x';// x-mått under, y-mått till höger
+    const isP=it=>primLow?it.lowVis:it.highVis,isS=it=>primLow?it.highVis:it.lowVis;
+    const last=info.length-1;
+    const prim=info.filter((it,k)=>k===0||k===last||isP(it)||!isS(it));
+    let sec=info.filter((it,k)=>k!==0&&k!==last&&isS(it)&&!isP(it));
+    if(sec.length)sec=[info[0],...sec,info[last]];
+    const HB=new Set(opt.hidden||[]);
+    /* dolda brytpunkter i en kedja: måtten på båda sidor slås ihop till ett */
+    const bkey=(low,v)=>'b'+axis+':'+f3(v);/* samma värde kan bara finnas i en av kedjorna, så sidan behövs inte i nyckeln */
+    const filt=(set,low)=>set.filter((it,k)=>k===0||k===set.length-1||!HB.has(bkey(low,it.v)));
+    const place=(set,low,level,isTotal,orig)=>{
+      const g={spans:[]};const fp=it=>T(P[low?it.mn:it.mx]);let pos;
+      if(axis==='x')pos=low?bb.maxY+off(level):bb.minY-off(level);
+      else pos=low?bb.minX-off(level):bb.maxX+off(level);
+      const items=isTotal?[set[0],set[set.length-1]]:set;
+      for(let k=0;k<items.length-1;k++){const a=items[k],b=items[k+1],F1=fp(a),F2=fp(b);
+        const D1=axis==='x'?P2(F1.x,pos):P2(pos,F1.y),D2=axis==='x'?P2(F2.x,pos):P2(pos,F2.y);
+        const meta=isTotal?null:{hideKey:bkey(low,(k===0&&items.length>2)?b.v:(k===items.length-2&&items.length>2?a.v:b.v)),
+          inner:(orig||[]).filter(it=>it.v>a.v+0.005&&it.v<b.v-0.005&&HB.has(bkey(low,it.v))).map(it=>bkey(low,it.v)),canHide:items.length>2};
+        out.lins.push({F1,F2,D1,D2,text:fmt(b.v-a.v),edit:{kind:'stretch',axis,lo:a.v,hi:b.v},g,tot:isTotal||items.length===2,meta,key:'c'+axis+(low?0:1)+(isTotal?'t':'')+':'+f3(a.v)+':'+f3(b.v)})}};
+    const primF=filt(prim,primLow),secF=sec.length?filt(sec,!primLow):[];
+    place(primF,primLow,0,false,prim);
+    if(primF.length>2&&opt.totals)place(info,primLow,1,true);
+    if(secF.length>2)place(secF,!primLow,0,false,sec);
+    else if(sec.length>2&&secF.length===2){/* hela kedjan ihopslagen: visa den ändå så att den kan delas upp igen */place(secF,!primLow,0,false,sec)}
+  }
+  function sideDims(){
+    const cen=mul(Q.reduce((s,q)=>add(s,q),P2(0,0)),1/Q.length);
+    edgesOf(P,closed).forEach(([a,b],i)=>{const Qa=Q[a],Qb=Q[b];if(len(sub(Qb,Qa))<1e-6)return;
+      const d=nrm(sub(Qb,Qa));let nn=P2(d.y,-d.x);const mid=mul(add(Qa,Qb),.5);
+      if(closed){if(pip(add(mid,mul(nn,1.5)),Q))nn=mul(nn,-1)}else if(dot(nn,sub(mid,cen))<0)nn=mul(nn,-1);
+      out.lins.push({F1:Qa,F2:Qb,D1:add(Qa,mul(nn,off1)),D2:add(Qb,mul(nn,off1)),text:fmt(len(sub(P[b],P[a]))),edit:{kind:'seg',i},g:{spans:[]},key:'s:'+kp(P[a])+':'+kp(P[b])})});
+    if(opt.totals){
+      const xs=P.map(p=>p.x),ys=P.map(p=>p.y),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+      const low=v=>{let b=null;P.forEach(p=>{if(Math.abs(p.x-v)<0.01&&(!b||p.y<b.y))b=p});return T(b)};
+      const right=v=>{let b=null;P.forEach(p=>{if(Math.abs(p.y-v)<0.01&&(!b||p.x>b.x))b=p});return T(b)};
+      if(x1-x0>0.01){const F1=low(x0),F2=low(x1),y=bb.maxY+off(1);out.lins.push({F1,F2,D1:P2(F1.x,y),D2:P2(F2.x,y),text:fmt(x1-x0),edit:{kind:'stretch',axis:'x',lo:x0,hi:x1},g:{spans:[]},tot:true,key:'tx'})}
+      if(y1-y0>0.01){const F1=right(y0),F2=right(y1),x=bb.maxX+off(1);out.lins.push({F1,F2,D1:P2(x,F1.y),D2:P2(x,F2.y),text:fmt(y1-y0),edit:{kind:'stretch',axis:'y',lo:y0,hi:y1},g:{spans:[]},tot:true,key:'ty'})}
+    }
+  }
+  function angleDims(){
+    const n=P.length,used=new Set();
+    const isAxis=e=>{const a=P[e],b=P[(e+1)%n];return Math.abs(a.x-b.x)<1e-6||Math.abs(a.y-b.y)<1e-6};
+    const isH=e=>Math.abs(P[e].y-P[(e+1)%n].y)<1e-6,isV=e=>Math.abs(P[e].x-P[(e+1)%n].x)<1e-6;
+    edgesOf(P,closed).forEach(([a,b],i)=>{if(isAxis(i))return;
+      if(closed&&n>=4){const pe=(a-1+n)%n,ne=b;const dx=Math.abs(P[b].x-P[a].x),dy=Math.abs(P[b].y-P[a].y);
+        if(((isH(pe)&&isV(ne))||(isV(pe)&&isH(ne)))&&Math.abs(dx-dy)<0.01){/* 45°-fas: etikett "3×45°" */
+          const mid=mul(add(Q[a],Q[b]),.5);const d=nrm(sub(Q[b],Q[a]));let nn=P2(d.y,-d.x);if(pip(add(mid,mul(nn,1.5)),Q))nn=mul(nn,-1);
+          out.chams.push({mid,n:nn,text:fmt(dx)+'×45°',key:'f:'+kp(P[a])});used.add(a);used.add(b);return}}
+      const av=P[a].av;if(av){/* vinkel satt via högerklick: mät mot vald grundriktning från den fasta änden */
+        const pv=av.pivot==='a'?a:b,mv=av.pivot==='a'?b:a;const V=Q[pv],ds=nrm(sub(Q[mv],V));
+        const ref=av.base==='h'?P2(ds.x>=0?1:-1,0):P2(0,ds.y>=0?1:-1);used.add(pv);
+        out.angs.push({V,ref,ds,ext:true,val:Math.acos(clamp1(dot(ds,ref)))*180/Math.PI,key:'a:'+kp(P[pv])});return}
+      const opts=[];if(closed||a>0)opts.push({v:a,other:(a-1+n)%n,e:(a-1+n)%n});if(closed||b<n-1)opts.push({v:b,other:(b+1)%n,e:b});
+      opts.sort((p,q)=>(isAxis(q.e)?1:0)-(isAxis(p.e)?1:0));
+      const ch=opts.find(o=>!used.has(o.v))||opts[0];let V,ds,ref,ext=false,kv=a;
+      if(ch){used.add(ch.v);kv=ch.v;V=Q[ch.v];const far=ch.v===a?Q[b]:Q[a];ds=nrm(sub(far,V));const da=nrm(sub(Q[ch.other],V));
+        const th=Math.acos(clamp1(dot(ds,da)));if(th>Math.PI/2+1e-6){ref=mul(da,-1);ext=true}else ref=da}
+      else{V=Q[a];ds=nrm(sub(Q[b],V));ref=P2(ds.x>=0?1:-1,0);ext=true}
+      out.angs.push({V,ref,ds,ext,val:Math.acos(clamp1(dot(ds,ref)))*180/Math.PI,key:'a:'+kp(P[kv])})});
+  }
+  function radDims(){const DQ=closed?densePts(P,true).map(T):[];P.forEach((p,j)=>{const f=filletAt(P,closed,j);if(!f)return;if(p.gq&&!f.chamfer&&P[(j-1+P.length)%P.length].r===p.r)return;/* rund spårbotten: ett R-mått per spår räcker */
+    if(f.chamfer){const A=T(f.T1),B=T(f.T2);const mid=mul(add(A,B),.5);const d=nrm(sub(B,A));let nn=P2(d.y,-d.x);if(closed&&pip(add(mid,mul(nn,1.5)),DQ))nn=mul(nn,-1);
+      out.chams.push({mid,n:nn,text:Math.abs(f.th-Math.PI/2)<0.01?fmt(f.c)+'×45°':'Fas '+fmt(f.c),key:'f:'+kp(P[j])});return}
+    const m=add(f.C,mul(nrm(sub(mul(add(f.T1,f.T2),.5),f.C)),f.r));const Mq=T(m);let dir=nrm(sub(Mq,T(f.C)));if(closed&&pip(add(Mq,mul(dir,1.5)),DQ))dir=mul(dir,-1);out.rads.push({C:T(f.C),M:Mq,dir,r:f.r,clamped:f.clamped,key:'r:'+kp(P[j])})})}
+}
+
+/* Ritar måtten som SVG. st={u,fs,col,lw}. interactive -> klickbara mått-texter */
+let editTargets=[];const dimMeta=new Map();
+function renderDims(D,st,interactive){
+  const {u,fs,col,lw}=st;let s='';const H=st.hidden||new Set();
+  /* dolda mått: på ritytan svaga (så de kan visas igen med högerklick), på ritningsbladet borta */
+  const open=k=>{const h=k&&H.has(k);if(h&&!interactive)return null;return `<g${k?` data-key="${esc(k)}"`:''}${h?' opacity=".22"':''}>`};const al=2.6*u,aw=0.85*u,gap=1*u,ov=2*u;
+  const line=(a,b,w)=>`<line x1="${f3(a.x)}" y1="${f3(a.y)}" x2="${f3(b.x)}" y2="${f3(b.y)}" stroke="${col}" stroke-width="${w||lw}"/>`;
+  const arrow=(tip,dir)=>{const b=sub(tip,mul(dir,al)),nn=P2(-dir.y,dir.x);const p1=add(b,mul(nn,aw)),p2=sub(b,mul(nn,aw));
+    return `<path d="M${f3(tip.x)} ${f3(tip.y)}L${f3(p1.x)} ${f3(p1.y)}L${f3(p2.x)} ${f3(p2.y)}Z" fill="${col}"/>`};
+  const text=(p,t,rot,anchor,attr)=>`<text x="${f3(p.x)}" y="${f3(p.y)}" font-size="${f3(fs)}" font-family="Helvetica, Arial, sans-serif" fill="${col}" text-anchor="${anchor||'middle'}"${rot?` transform="rotate(${f3(rot)} ${f3(p.x)} ${f3(p.y)})"`:''}${attr||''}>${esc(t)}</text>`;
+  D.lins.forEach(d=>{const og=open(d.meta?null:d.key);if(og===null)return;s+=d.meta?og.replace('<g','<g data-key="'+esc(d.key)+'"'):og;if(d.meta)dimMeta.set(d.key,d.meta);
+    // hjälplinjer
+    [[d.F1,d.D1],[d.F2,d.D2]].forEach(([F,Dp])=>{const v=sub(Dp,F);const L=len(v);if(L<gap+0.01)return;const e=mul(v,1/L);s+=line(add(F,mul(e,gap)),add(Dp,mul(e,ov)))});
+    let A=d.D1,B=d.D2,r=sub(B,A);const L=len(r);if(L<1e-6){s+='</g>';return}r=mul(r,1/L);
+    if(r.x<-1e-9||(Math.abs(r.x)<1e-9&&r.y>0)){[A,B]=[B,A];r=mul(r,-1)}
+    const inside=L>2*al+1.5*u;
+    if(inside){s+=line(A,B);s+=arrow(A,mul(r,-1))+arrow(B,r)}
+    else{s+=line(sub(A,mul(r,al*2)),add(B,mul(r,al*2)));s+=arrow(A,r)+arrow(B,mul(r,-1))}
+    const above=P2(r.y,-r.x);const tw=d.text.length*fs*0.58;const mid=mul(add(A,B),.5);const c0=dot(mid,r);
+    let level=0;while(d.g.spans.some(sp=>sp.level===level&&sp.a<c0+tw/2+u&&sp.b>c0-tw/2-u))level++;
+    d.g.spans.push({a:c0-tw/2,b:c0+tw/2,level});
+    const tp=add(mid,mul(above,0.9*u+level*fs*1.1));const rot=Math.atan2(r.y,r.x)*180/Math.PI;
+    let attr='';if(interactive&&d.edit){attr=` class="dt" data-e="${editTargets.length}"`;editTargets.push({edit:d.edit,text:d.text,p:tp,rot})}
+    s+=text(tp,d.text+(st.lockMark&&d.tot?' 🔒':''),Math.abs(rot)>0.01?rot:0,'middle',attr);s+='</g>';
+  });
+  D.angs.forEach(a=>{const og=open(a.key);if(og===null)return;s+=og;const R=(a.val<25?14:9)*u;const p1=add(a.V,mul(a.ref,R)),p2=add(a.V,mul(a.ds,R));
+    if(a.ext)s+=line(add(a.V,mul(a.ref,gap)),add(a.V,mul(a.ref,R+ov)));
+    s+=`<path d="M${f3(p1.x)} ${f3(p1.y)}A${f3(R)} ${f3(R)} 0 0 ${crs(a.ref,a.ds)>0?1:0} ${f3(p2.x)} ${f3(p2.y)}" fill="none" stroke="${col}" stroke-width="${lw}"/>`;
+    let tp;if(a.val<25){/* liten vinkel: texten bredvid bågens ände, på andra sidan referenslinjen */const away=mul(nrm(sub(a.ref,mul(a.ds,dot(a.ds,a.ref)))),1);tp=add(add(a.V,mul(a.ref,R+3*u)),mul(away,fs*0.7));}
+    else{const bis=nrm(add(a.ref,a.ds));tp=add(a.V,mul(bis,R+3.6*u))}s+=text(P2(tp.x,tp.y+fs*0.35),fmt(a.val)+'°',0,'middle')+'</g>'});
+  (D.chams||[]).forEach(c=>{const og=open(c.key);if(og===null)return;s+=og;const e=add(c.mid,mul(c.n,12*u));const sx=c.n.x>=0?1:-1;const t=add(e,P2(sx*2*u,0));
+    s+=`<path d="M${f3(c.mid.x)} ${f3(c.mid.y)}L${f3(e.x)} ${f3(e.y)}L${f3(t.x)} ${f3(t.y)}" fill="none" stroke="${col}" stroke-width="${lw}"/>`+arrow(c.mid,mul(c.n,-1));
+    s+=text(P2(t.x+sx*0.8*u,t.y+fs*0.35),c.text,0,sx>0?'start':'end')+'</g>'});
+  D.rads.forEach(r=>{const og=open(r.key);if(og===null)return;s+=og;const dir=r.dir;const e=add(r.M,mul(dir,7*u));const sx=dir.x>=0?1:-1;const t=add(e,P2(sx*2*u,0));
+    s+=`<path d="M${f3(r.M.x)} ${f3(r.M.y)}L${f3(e.x)} ${f3(e.y)}L${f3(t.x)} ${f3(t.y)}" fill="none" stroke="${col}" stroke-width="${lw}"/>`+arrow(r.M,mul(dir,-1));
+    s+=text(P2(t.x+sx*0.8*u,t.y+fs*0.35),'R'+fmt(r.r),0,sx>0?'start':'end')+'</g>'});
+  return s}
+
+/* ===================== Redigering av mått ===================== */
+function stretch(axis,at,delta,dir){const c=axis==='x'?'x':'y';doc.pts.forEach(p=>{if(dir>0?p[c]>=at-0.005:p[c]<=at+0.005)p[c]+=delta})}
+function setSegLen(i,newL){const P=doc.pts,n=P.length,a=P[i],b=P[(i+1)%n];const v=sub(b,a),L=len(v);if(L<1e-9||!(newL>0))return false;
+  const d=mul(v,1/L),delta=newL-L;
+  if(!doc.closed){for(let j=i+1;j<n;j++){P[j].x+=d.x*delta;P[j].y+=d.y*delta}}
+  else{if(lockBox()&&(Math.abs(d.x)<1e-9||Math.abs(d.y)<1e-9)){const ax=Math.abs(d.x)>Math.abs(d.y)?'x':'y';const r=lockedResize(ax,Math.min(a[ax],b[ax]),Math.max(a[ax],b[ax]),delta);if(r===false)return false;if(r===true)return true}
+    const bx=b.x,by=b.y;if(Math.abs(d.x)>1e-9)stretch('x',bx,d.x*delta,d.x);if(Math.abs(d.y)>1e-9)stretch('y',by,d.y*delta,d.y)}
+  return true}
+function setSegAngWrap(i,deg){setSegAng(i,deg);const av=doc.pts[i].av;if(av){const st=avState(i);av.deg=st.deg;av.side=st.side}}
+function setSegAng(i,deg){const P=doc.pts,n=P.length,a=P[i],b=P[(i+1)%n];const cur=Math.atan2(b.y-a.y,b.x-a.x);const da=deg*Math.PI/180-cur;
+  const c=Math.cos(da),s=Math.sin(da);const last=doc.closed?(i+1===n?-1:n-1):n-1;
+  for(let j=i+1;j<=last;j++){const q=sub(P[j],a);P[j].x=a.x+q.x*c-q.y*s;P[j].y=a.y+q.x*s+q.y*c}}
+function chamfer(j,c){const P=doc.pts,n=P.length,V=P[j],A=P[(j-1+n)%n],B=P[(j+1)%n];if(!(c>0))return false;
+  if(c>=Math.min(len(sub(A,V)),len(sub(B,V)))-1e-6){toast('Fasen är längre än sidorna.');return false}
+  const p1=add(V,mul(nrm(sub(A,V)),c)),p2=add(V,mul(nrm(sub(B,V)),c));P.splice(j,1,{x:p1.x,y:p1.y,r:0,s:''},{x:p2.x,y:p2.y,r:0,s:V.s||''});return true}
+/* ===== Låst yttermått ===== */
+function lockBox(){return doc.lock&&doc.closed&&doc.pts.length>=3?bbox(doc.pts):null}
+function lockWarn(){const n=Date.now();if(n-(lockWarn.t||0)<2500)return;lockWarn.t=n;const b=bbox(doc.pts);toast('Yttermåttet är låst ('+fmt(b.maxX-b.minX)+' × '+fmt(b.maxY-b.minY)+'). Klicka på totalmåttet för att ändra det, eller ta bort låset.',3500)}
+function moveLine(axis,at,delta){doc.pts.forEach(p=>{if(Math.abs(p[axis]-at)<0.005)p[axis]+=delta})}
+function lockedResize(axis,lo,hi,delta){/* ändra intervallet lo..hi utan att yttermåttet ändras. 'total' = intervallet ÄR yttermåttet */
+  const bb=lockBox(),mn=axis==='x'?bb.minX:bb.minY,mx=axis==='x'?bb.maxX:bb.maxY,e=0.005;
+  if(Math.abs(hi-mx)>e){const na=hi+delta;if(na>mx+e||na<lo-e){toast('Får inte plats inom det låsta yttermåttet.');return false}moveLine(axis,hi,delta);return true}
+  if(Math.abs(lo-mn)>e){const na=lo-delta;if(na<mn-e||na>hi+e){toast('Får inte plats inom det låsta yttermåttet.');return false}moveLine(axis,lo,-delta);return true}
+  return 'total'}
+function lockDelta(ids,orig,d){const bb=lockBox();if(!bb)return d;d=P2(d.x,d.y);const e=0.005;
+  [['x',bb.minX,bb.maxX],['y',bb.minY,bb.maxY]].forEach(([ax,mn,mx])=>{if(Math.abs(d[ax])<1e-12)return;
+    if(orig.some(o=>Math.abs(o[ax]-mn)<e||Math.abs(o[ax]-mx)<e)){d[ax]=0;lockWarn();return}
+    let hiLim=Infinity,loLim=-Infinity;orig.forEach(o=>{hiLim=Math.min(hiLim,mx-o[ax]);loLim=Math.max(loLim,mn-o[ax])});d[ax]=Math.max(loLim,Math.min(hiLim,d[ax]))});
+  return d}
+function edgeInfo(i){const P=doc.pts,n=P.length,ia=i,ib=(i+1)%n,A=P[ia],B=P[ib],v=sub(B,A),L=len(v);const hor=Math.abs(v.x)>=Math.abs(v.y);
+  const first=hor?(A.x<=B.x?ia:ib):(A.y>=B.y?ia:ib);/* vänster resp. övre ände */
+  const cur=L>0?Math.asin(Math.min(1,(hor?Math.abs(v.y):Math.abs(v.x))/L))*180/Math.PI:0;return {ia,ib,hor,first,second:first===ia?ib:ia,cur}}
+function setEdgeAngle(i,deg,pivot,side){/* pivot: punktindex som står still. side: +1 = upp/höger, -1 = ned/vänster */
+  const P=doc.pts,n=P.length,inf=edgeInfo(i);const im=pivot===inf.ia?inf.ib:inf.ia;const P0=P[pivot],M=P[im];
+  const bdir=inf.hor?P2(Math.sign(M.x-P0.x)||1,0):P2(0,Math.sign(M.y-P0.y)||1);const perp=inf.hor?P2(0,side):P2(side,0);
+  const r=deg*Math.PI/180;const dir=add(mul(bdir,Math.cos(r)),mul(perp,Math.sin(r)));
+  let nb=null;if(im===inf.ib){if(doc.closed||inf.ib<n-1)nb=(inf.ib+1)%n}else{if(doc.closed||inf.ia>0)nb=(inf.ia-1+n)%n}
+  let nm;if(nb!=null&&nb!==pivot){const e=sub(P[nb],M);const den=crs(dir,e);if(Math.abs(den)<1e-9){toast('Det går inte – linjen skulle bli parallell med grannlinjen.');return false}
+    const t=crs(sub(M,P0),e)/den;if(!(t>1e-6)){toast('Den vinkeln går inte här – linjen når inte grannlinjen.');return false}nm=add(P0,mul(dir,t))}
+  else nm=add(P0,mul(dir,len(sub(M,P0))));
+  const bb=lockBox();if(bb&&(nm.x<bb.minX-0.005||nm.x>bb.maxX+0.005||nm.y<bb.minY-0.005||nm.y>bb.maxY+0.005)){toast('Vinkeln går utanför det låsta yttermåttet – välj andra hållet eller ta bort låset.',3500);return false}
+  M.x=r6(nm.x);M.y=r6(nm.y);P[inf.ia].av={base:inf.hor?'h':'v',pivot:pivot===inf.ia?'a':'b',deg,side};if(deg===0)delete P[inf.ia].av;return true}
+/* Vinklar satta med högerklick (hyvelstål) hålls fast när andra mått ändras:
+   den fasta änden står kvar och den andra änden glider längs grannlinjen tills vinkeln stämmer igen. */
+function avState(i){const P=doc.pts,n=P.length,av=P[i].av;const ia=i,ib=(i+1)%n;const pv=av.pivot==='a'?ia:ib,mv=av.pivot==='a'?ib:ia;
+  const P0=P[pv],M=P[mv],v=sub(M,P0),L=len(v);const along=av.base==='h'?Math.abs(v.x):Math.abs(v.y),across=av.base==='h'?v.y:v.x;
+  return {pv,mv,deg:L>0?Math.atan2(Math.abs(across),along)*180/Math.PI:0,side:Math.sign(across)||1}}
+function enforceAngles(skip){const P=doc.pts,n=P.length;if(n<2)return;const sk=new Set(skip||[]);let failed=false;
+  edgesOf(P,doc.closed).forEach(([ia,ib],i)=>{const av=P[i].av;if(!av)return;
+    if(av.deg==null){const st=avState(i);av.deg=st.deg;av.side=st.side}
+    if(sk.has(ia)||sk.has(ib))return;const st=avState(i);if(Math.abs(st.deg-av.deg)<1e-4&&st.side===av.side)return;
+    const keep=JSON.stringify(P);const bb=lockBox();const ok=setEdgeAngleRaw(i,av.deg,st.pv,av.side);
+    if(!ok||(bb&&P.some(p=>p.x<bb.minX-0.005||p.x>bb.maxX+0.005||p.y<bb.minY-0.005||p.y>bb.maxY+0.005))){const old=JSON.parse(keep);old.forEach((q,k)=>{P[k].x=q.x;P[k].y=q.y});failed=true}});
+  if(failed&&!skip)toast('En låst vinkel kunde inte behållas vid ändringen – kontrollera vinklarna.',3500)}
+function setEdgeAngleRaw(i,deg,pivot,side){/* samma som setEdgeAngle men utan meddelanden och utan att ändra sparad vinkel */
+  const P=doc.pts,n=P.length,inf=edgeInfo(i);const im=pivot===inf.ia?inf.ib:inf.ia;const P0=P[pivot],M=P[im];const av=P[inf.ia].av;
+  const bdir=av.base==='h'?P2(Math.sign(M.x-P0.x)||1,0):P2(0,Math.sign(M.y-P0.y)||1);const perp=av.base==='h'?P2(0,side):P2(side,0);
+  const r=deg*Math.PI/180;const dir=add(mul(bdir,Math.cos(r)),mul(perp,Math.sin(r)));
+  let nb=null;if(im===inf.ib){if(doc.closed||inf.ib<n-1)nb=(inf.ib+1)%n}else{if(doc.closed||inf.ia>0)nb=(inf.ia-1+n)%n}
+  let nm;if(nb!=null&&nb!==pivot){const e=sub(P[nb],M);const den=crs(dir,e);if(Math.abs(den)<1e-9)return false;const t=crs(sub(M,P0),e)/den;if(!(t>1e-6))return false;nm=add(P0,mul(dir,t))}
+  else nm=add(P0,mul(dir,len(sub(M,P0))));M.x=r6(nm.x);M.y=r6(nm.y);return true}
+/* Spår (t.ex. avlastningsspår mot kupning) i en sida. Ytan på sidan behålls mellan spåren, spårens väggar får ingen yta. */
+function addGrooves(i,N,w,dep,cc,round){const P=doc.pts,n=P.length,ia=i,ib=(i+1)%n,A=P[ia],B=P[ib];const v=sub(B,A),L=len(v);if(L<1e-6)return 'Linjen är för kort.';
+  const u=mul(v,1/L);let nn=P2(-u.y,u.x);const D=densePts(P,true);const mid=add(A,mul(v,.5));if(!pip(add(mid,mul(nn,0.05)),D))nn=mul(nn,-1);/* nn pekar in i träet */
+  let cs=[];if(cc>0){const tot=(N-1)*cc;for(let k=0;k<N;k++)cs.push(L/2-tot/2+k*cc)}else for(let k=0;k<N;k++)cs.push(L*(k+1)/(N+1));
+  if(cs[0]-w/2<0.5||cs[N-1]+w/2>L-0.5)return 'Spåren får inte plats på linjen ('+fmt(L)+' mm). Minska antal, bredd eller avstånd.';
+  for(let k=1;k<N;k++)if(cs[k]-cs[k-1]<w+0.5)return 'Spåren går in i varandra – öka avståndet eller minska bredden.';
+  const pts=[];const face=A.s||'';
+  for(const c of cs){const p1=add(A,mul(u,c-w/2)),p4=add(A,mul(u,c+w/2)),p2=add(p1,mul(nn,dep)),p3=add(p4,mul(nn,dep));
+    if(!pip(add(p2,mul(u,w/2)),D)||!pip(add(add(p2,mul(u,w/2)),mul(nn,0.3)),D))return 'Spåret är djupare än materialet.';
+    pts.push({x:r6(p1.x),y:r6(p1.y),r:0,c:0,s:''},{x:r6(p2.x),y:r6(p2.y),r:round?-w/2:0,c:0,s:''},{x:r6(p3.x),y:r6(p3.y),r:round?-w/2:0,c:0,s:'',gq:1},{x:r6(p4.x),y:r6(p4.y),r:0,c:0,s:face})}
+  if(A.av)delete A.av;P.splice(ia+1,0,...pts);return true}
+function grooveForm(ed){const g=ui.gro||(ui.gro={n:2,w:4,d:4,cc:'',round:false});const c=$('#ctx');
+  c.innerHTML=`<div class="h">Spår i linje ${ed+1}</div>
+  <div class="gf"><label>Antal<input id="gN" value="${g.n}"></label><label>Bredd<input id="gW" value="${fmt(g.w)}"></label><label>Djup<input id="gD" value="${fmt(g.d)}"></label><label>c/c<input id="gC" value="${g.cc}" placeholder="jämnt"></label></div>
+  <label class="chk" style="padding:0 8px"><input type="checkbox" id="gR" ${g.round?'checked':''}> Rund botten</label>
+  <div class="small" style="padding:2px 8px 6px">Tomt c/c = jämnt fördelat över linjen. Annars centrerat med givet avstånd.</div>
+  <div class="row" style="justify-content:flex-end;padding:0 6px 4px"><button class="btn" id="gCancel">Avbryt</button><button class="btn pri" id="gOk">Lägg till</button></div>`;
+  c.querySelectorAll('input').forEach(el=>el.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')$('#gOk').click();if(e.key==='Escape')closeCtx()}));
+  $('#gCancel').onclick=e=>{e.stopPropagation();closeCtx()};
+  $('#gOk').onclick=e=>{e.stopPropagation();const N=Math.round(num($('#gN').value)),w=num($('#gW').value),d=num($('#gD').value),ccv=$('#gC').value.trim(),cc=ccv?num(ccv):0,round=$('#gR').checked;
+    if(!(N>=1&&N<=30&&w>0&&d>0&&(cc===0||cc>0))){toast('Kontrollera antal, bredd, djup och c/c.');return}
+    ui.gro={n:N,w,d,cc:ccv,round};beginChange();const r=addGrooves(ed,N,w,d,cc,round);if(r!==true){undoS.pop();toast(r,4000);return}
+    closeCtx();changed();toast(N+(N===1?' spår':' spår')+' tillagda. Ångra med Ctrl+Z.')};
+  setTimeout(()=>$('#gN').focus(),0)}
+function applyEdit(t,val){
+  if(!(val>0)){toast('Ange ett mått större än 0.');return}
+  beginChange();const e=t.edit;
+  if(e.kind==='stretch'){const delta=val-(e.hi-e.lo);const r=lockBox()?lockedResize(e.axis,e.lo,e.hi,delta):'total';if(r===false){undoS.pop();renderCanvas();return}if(r==='total')stretch(e.axis,e.hi,delta,1)}
+  else if(e.kind==='seg'){if(setSegLen(e.i,val)===false){undoS.pop();renderCanvas();return}}
+  changed()}
+
+/* ===================== Ritytan ===================== */
+const svg=$('#cv');
+let view={z:4,ox:300,oy:300};
+const T=p=>P2(view.ox+p.x*view.z,view.oy-p.y*view.z);
+const inv=(sx,sy)=>P2((sx-view.ox)/view.z,(view.oy-sy)/view.z);
+const SU=4.3;// skärm: px per "pappers-mm"
+const scrStyle={u:SU,fs:2.6*SU,col:'#1660c0',lw:1};
+const ui={tool:'draw',snapA:15,snapL:1,mouse:null,buf:'',selV:new Set(),selE:new Set(),hoverV:null,hoverE:null,drag:null,pan:null,space:false,tab:'draw'};
+
+function clearSel(){ui.selV=new Set();ui.selE=new Set()}
+function movingSet(){const m=new Set(ui.selV);const n=doc.pts.length;ui.selE.forEach(i=>{m.add(i);m.add((i+1)%n)});return [...m].filter(i=>i<n)}
+/* Låsning mot andra hörns mått: bara inom några snäppsteg (så 12,5 inte dras till 12 när man snäpper på 0,1), och aldrig när Alt hålls ned */
+function alignTol(){return ui.alt?-1:Math.min(7/view.z,3*ui.snapL)}
+function snapLen(v){const s=ui.snapL;return Math.round(v/s)*s}
+function parseBuf(){if(!ui.buf)return null;const m=ui.buf.match(/^([\d.,]*)(?:<(-?[\d.,]*))?$/);if(!m)return null;
+  const l=num(m[1]),a=m[2]!==undefined?num(m[2]):NaN;return {len:isFinite(l)?l:null,ang:isFinite(a)?a:null}}
+function previewEnd(){
+  const P=doc.pts;if(ui.tool!=='draw'||!ui.mouse||!P.length||doc.closed)return null;
+  const A=P[P.length-1],M=inv(ui.mouse.x,ui.mouse.y);const pb=parseBuf();
+  if(P.length>=3&&!(pb&&pb.len!=null)){const q=T(P[0]);if(Math.hypot(q.x-ui.mouse.x,q.y-ui.mouse.y)<11)return {p:P2(P[0].x,P[0].y),closing:true,len:len(sub(P[0],A)),ang:angDeg(sub(P[0],A))}}
+  const v=sub(M,A);if(len(v)<1e-9&&!(pb&&pb.len!=null&&pb.ang!=null))return null;
+  let a=Math.atan2(v.y,v.x);
+  if(pb&&pb.ang!=null)a=pb.ang*Math.PI/180;else if(ui.snapA>0){const st=ui.snapA*Math.PI/180;a=Math.round(a/st)*st}
+  const d=P2(Math.cos(a),Math.sin(a));if(Math.abs(d.x)<1e-12)d.x=0;if(Math.abs(d.y)<1e-12)d.y=0;
+  let l,guide=null;
+  if(pb&&pb.len!=null)l=pb.len;
+  else{l=snapLen(Math.max(0,dot(v,d)));let best=null;const tol=alignTol();
+    P.forEach(q=>{[['x',d.x],['y',d.y]].forEach(([c,dc])=>{if(Math.abs(dc)<1e-6)return;const t=(q[c]-A[c])/dc;
+      if(t>1e-6&&Math.abs(t-l)<tol&&(!best||Math.abs(t-l)<best.e))best={t,e:Math.abs(t-l),q}})});
+    if(best){l=best.t;guide={from:best.q}}}
+  const p=add(A,mul(d,l));p.x=r6(p.x);p.y=r6(p.y);if(guide)guide.to=p;
+  let closing=false;if(P.length>=3&&len(sub(p,P[0]))<1e-6)closing=true;
+  return {p,closing,len:l,ang:(a*180/Math.PI%360+360)%360,guide}}
+
+function gridSVG(w,h){
+  const steps=[0.1,0.2,0.5,1,2,5,10,20,50,100,200,500,1000,2000,5000];const st=steps.find(x=>x*view.z>=12)||5000;
+  const lead=Math.round(st/Math.pow(10,Math.floor(Math.log10(st)+1e-9)));const mulm=lead===5?2:5;
+  const a=inv(0,h),b=inv(w,0);let s='';
+  for(let k=Math.ceil(a.x/st);k*st<=b.x;k++){const x=view.ox+k*st*view.z;s+=`<line x1="${f3(x)}" y1="0" x2="${f3(x)}" y2="${h}" stroke="${k===0?'#d9b8ae':(k%mulm===0?'#e2ded6':'#efece6')}" stroke-width="1"/>`}
+  for(let k=Math.ceil(a.y/st);k*st<=b.y;k++){const y=view.oy-k*st*view.z;s+=`<line x1="0" y1="${f3(y)}" x2="${w}" y2="${f3(y)}" stroke="${k===0?'#d9b8ae':(k%mulm===0?'#e2ded6':'#efece6')}" stroke-width="1"/>`}
+  return s+`<text x="${w-10}" y="${h-28}" text-anchor="end" font-size="11" fill="#9a958c">rutnät ${fmt(st)} mm</text>`}
+
+function renderCanvas(){
+  const {width:w,height:h}=svg.getBoundingClientRect();if(!w)return;svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  const P=doc.pts;let s=gridSVG(w,h);editTargets=[];
+  if(P.length>=2){s+=`<path d="${outlinePath(P,doc.closed,T,view.z)}" fill="${doc.closed?'#efe3cf':'none'}" stroke="#1d2733" stroke-width="2" stroke-linejoin="round"/>`}
+  const hiEs=new Set(ui.selE);if(ui.hoverE!=null)hiEs.add(ui.hoverE);
+  if(P.length>=2){const E=edgesOf(P,doc.closed);hiEs.forEach(i=>{const e=E[i];if(!e)return;const a=T(P[e[0]]),b=T(P[e[1]]);s+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#1660c0" stroke-opacity="${ui.selE.has(i)?'.45':'.22'}" stroke-width="8" stroke-linecap="round"/>`})}
+  if(P.length>=2){s+=surfTextures(P,doc.closed,T,4.2,'#1d2733',1.6);
+    s+=surfMarkers(P,doc.closed,T,4.2)}
+  scrStyle.lockMark=!!lockBox();scrStyle.hidden=new Set(doc.hidden||[]);
+  if(P.length>=2)s+=renderDims(genDims(P,doc.closed,T,SU,doc.dim),scrStyle,true);
+  const pe=previewEnd();
+  if(pe){const A=T(P[P.length-1]),B=T(pe.p);s+=`<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" stroke="#c2410c" stroke-width="2" stroke-dasharray="6 4"/>`;
+    if(pe.guide){const g=T(pe.guide.from);s+=`<line x1="${g.x}" y1="${g.y}" x2="${B.x}" y2="${B.y}" stroke="#16a34a" stroke-width="1" stroke-dasharray="3 3"/>`}
+    s+=`<circle cx="${B.x}" cy="${B.y}" r="4" fill="#c2410c"/>`}
+  if(ui.tool==='select'&&P.length>=2&&!ui.drag){const E=edgesOf(P,doc.closed);const show=new Set(ui.selE);if(ui.hoverE!=null)show.add(ui.hoverE);if(ui.hoverMid!=null)show.add(ui.hoverMid);
+    show.forEach(i=>{const e=E[i];if(!e)return;const q=midHandle(i);const h=ui.hoverMid===i;const mq=T(mul(add(P[e[0]],P[e[1]]),.5));s+=`<line x1="${mq.x}" y1="${mq.y}" x2="${q.x}" y2="${q.y}" stroke="#16a34a" stroke-width="1" stroke-dasharray="2 2"/>`;
+      s+=`<circle cx="${q.x}" cy="${q.y}" r="${h?7:5.5}" fill="${h?'#16a34a':'#fff'}" stroke="#16a34a" stroke-width="1.5"/><path d="M${q.x-3} ${q.y}h6M${q.x} ${q.y-3}v6" stroke="${h?'#fff':'#16a34a'}" stroke-width="1.5"/>`})}
+  P.forEach((p,i)=>{const q=T(p);const sel=ui.selV.has(i)||(ui.drag&&ui.drag.ids.includes(i)),hov=ui.hoverV===i;
+    if(i===0&&ui.tool==='draw'&&!doc.closed&&P.length>=3)s+=`<circle cx="${q.x}" cy="${q.y}" r="9" fill="none" stroke="#16a34a" stroke-width="2"/>`;
+    s+=`<rect x="${q.x-3.5}" y="${q.y-3.5}" width="7" height="7" fill="${sel?'#1660c0':(hov?'#9cc0ef':'#fff')}" stroke="#1d2733" stroke-width="1"/>`});
+  if(!P.length&&ui.tool==='draw'&&ui.mouse){const m=inv(ui.mouse.x,ui.mouse.y);const q=T(P2(snapLen(m.x),snapLen(m.y)));s+=`<circle cx="${q.x}" cy="${q.y}" r="4" fill="#c2410c"/>`}
+  svg.innerHTML=s;
+  // HUD
+  const hud=$('#hud');
+  if(pe&&ui.mouse){hud.style.display='block';hud.style.left=(ui.mouse.x+18)+'px';hud.style.top=(ui.mouse.y+16)+'px';
+    hud.textContent=(pe.closing?'Stäng profilen  ':'')+fmt(pe.len)+' mm   ∠ '+fmt(pe.ang)+'°'+(ui.buf?'   ⌨ '+ui.buf+'_':'')}
+  else if(ui.buf){hud.style.display='block';hud.textContent='⌨ '+ui.buf+'_'}
+  else hud.style.display='none';
+  $('#hint').innerHTML=hintText();
+  const us=usedSurf();const lg=$('#legend');lg.style.display=us.length?'block':'none';
+  lg.innerHTML=us.length?'<b style="margin-right:8px">Ytor</b>'+us.map(k=>`<span><i style="border-color:#1d2733;color:#1d2733">${SURF[k].k}</i><svg width="30" height="12" style="overflow:visible">${surfSample(1,2,28,k,3.4,'#1d2733',1.4)}</svg>${SURF[k].name}</span>`).join(''):'';
+}
+function hintText(){
+  const P=doc.pts;
+  if(ui.tool==='draw'){
+    if(!P.length)return 'Klicka för att sätta <b>startpunkten</b>. Eller bygg profilen med siffror i listan till vänster.';
+    if(doc.closed)return 'Profilen är stängd. Klicka på ett blått mått för att ändra det, eller byt till <b>Markera</b> för att flytta hörn. Klick i ritytan startar en ny profil.';
+    return 'Dra ut riktningen och klicka för hörn. Skriv <span class="kbd">25</span> + Enter för exakt längd, eller <span class="kbd">25&lt;45</span> för längd och vinkel. Klicka på <span style="color:#16a34a">startpunkten</span> för att stänga. <span class="kbd">Backsteg</span> tar bort senaste hörnet, <span class="kbd">Esc</span> = klar.'}
+  if(ui.tool==='select')return 'Klicka på en linje eller ett hörn och dra för att flytta. En linje flyttas rakt ut från sig själv, så vinklarna behålls. Håll <span class="kbd">Alt</span> för att slippa låsningen mot andra hörn. <b>Högerklicka</b> på en linje för att välja yta (gäller alla markerade linjer). Klicka på det gröna <b>+</b> vid linjens mitt för en ny mittpunkt (dubbelklicka på linjen för en punkt just där du klickar). Håll <span class="kbd">Ctrl</span> och klicka för att markera flera – dra sedan i någon av dem så flyttas alla. <span class="kbd">Shift</span> låser rörelsen till rakt upp/ned eller i sidled. Piltangenter flyttar markeringen ett snäpp. <span class="kbd">Delete</span> tar bort markerade hörn.';
+  return 'Dra för att panorera. Scrolla för att zooma.'}
+
+function fitView(){const {width:w,height:h}=svg.getBoundingClientRect();const P=doc.pts;if(!w)return;
+  if(P.length<2){view.z=4;view.ox=w/2-(P[0]?P[0].x*4:0);view.oy=h/2+(P[0]?P[0].y*4:0);renderCanvas();return}
+  const D=densePts(P,doc.closed),b=bbox(D);const bw=Math.max(b.maxX-b.minX,1),bh=Math.max(b.maxY-b.minY,1);
+  view.z=Math.max(0.05,Math.min((w-200)/bw,(h-200)/bh,400));view.ox=w/2-(b.minX+b.maxX)/2*view.z;view.oy=h/2+(b.minY+b.maxY)/2*view.z;renderCanvas()}
+
+function hitVertex(sx,sy){let best=null,bd=6;doc.pts.forEach((p,i)=>{const q=T(p);const d=Math.hypot(q.x-sx,q.y-sy);if(d<bd){bd=d;best=i}});return best}
+function hitEdge(sx,sy){let best=null,bd=7;const m=P2(sx,sy);edgesOf(doc.pts,doc.closed).forEach(([a,b],i)=>{const A=T(doc.pts[a]),B=T(doc.pts[b]);const ab=sub(B,A);const L2=dot(ab,ab);if(L2<1e-9)return;
+  const t=Math.max(0,Math.min(1,dot(sub(m,A),ab)/L2));const d=len(sub(m,add(A,mul(ab,t))));if(d<bd){bd=d;best=i}});return best}
+function midHandle(i){/* "+"-knappen sitter en bit utanför linjens mitt, så att ett klick på själva linjen fortfarande markerar den */
+  const [a,b]=edgesOf(doc.pts,doc.closed)[i];const A=T(doc.pts[a]),B=T(doc.pts[b]);const mid=mul(add(A,B),.5);const d=nrm(sub(B,A));let nn=P2(d.y,-d.x);
+  if(doc.closed){const Q=densePts(doc.pts,true).map(T);if(pip(add(mid,mul(nn,3)),Q))nn=mul(nn,-1)}return add(mid,mul(nn,16))}
+function hitMid(sx,sy){let best=null,bd=8;const hs=new Set(ui.selE);if(ui.hoverE!=null)hs.add(ui.hoverE);if(ui.hoverMid!=null)hs.add(ui.hoverMid);
+  edgesOf(doc.pts,doc.closed).forEach(([a,b],i)=>{if(!hs.has(i))return;const q=midHandle(i);const d=Math.hypot(q.x-sx,q.y-sy);if(d<bd){bd=d;best=i}});return best}
+function insertOnEdge(i,p){const P=doc.pts;P.splice(i+1,0,{x:r6(p.x),y:r6(p.y),r:0,s:P[i].s||''});return i+1}
+function pointOnEdge(i,sx,sy){const E=edgesOf(doc.pts,doc.closed)[i];const A=doc.pts[E[0]],B=doc.pts[E[1]];const v=sub(B,A),L=len(v);
+  const m=inv(sx,sy);let t=dot(sub(m,A),v)/L;t=Math.max(ui.snapL,Math.min(L-ui.snapL,snapLen(t)));if(!(t>0&&t<L))t=L/2;return add(A,mul(v,t/L))}
+function mpos(e){const r=svg.getBoundingClientRect();return P2(e.clientX-r.left,e.clientY-r.top)}
+
+async function placeFromPreview(){const P=doc.pts;const pe=previewEnd();if(!pe||pe.len<1e-6)return;
+  beginChange();if(pe.closing)doc.closed=true;else P.push({x:pe.p.x,y:pe.p.y,r:0});ui.buf='';changed();
+  if(doc.closed)toast('Profilen är stängd – måtten är satta automatiskt.')}
+
+svg.addEventListener('pointerdown',async e=>{
+  const t=e.target;
+  if(t.classList&&t.classList.contains('dt')&&e.button===0){e.preventDefault();openDimEdit(+t.dataset.e);return}
+  const m=mpos(e);ui.mouse=m;ui.alt=e.altKey;
+  /* egen dubbelklicksdetektering: ritytan ritas om vid varje klick, så webbläsarens dblclick uteblir */
+  const now=Date.now(),lc=ui.lastDown,mods=e.ctrlKey||e.metaKey||e.shiftKey;ui.lastDown={t:now,x:m.x,y:m.y,mods};
+  if(e.button===0&&!mods&&lc&&!lc.mods&&now-lc.t<380&&Math.hypot(lc.x-m.x,lc.y-m.y)<6){ui.lastDown=null;
+    if(ui.tool==='draw'&&!doc.closed&&doc.pts.length){setTool('select');return}
+    if(ui.tool==='select'&&hitVertex(m.x,m.y)==null){const ed=hitEdge(m.x,m.y);if(ed!=null){beginChange();const j=insertOnEdge(ed,pointOnEdge(ed,m.x,m.y));clearSel();ui.selV.add(j);changed();return}}}
+  if(e.button===1||ui.space||ui.tool==='pan'){ui.pan={m,ox:view.ox,oy:view.oy};svg.setPointerCapture(e.pointerId);return}
+  if(e.button!==0)return;
+  if(ui.tool==='draw'){
+    if(!doc.pts.length){const p=inv(m.x,m.y);beginChange();doc.pts.push({x:snapLen(p.x),y:snapLen(p.y),r:0});changed();return}
+    if(doc.closed){if(await ask('Börja på en ny profil? Den nuvarande ersätts (spara som utkast först om du vill ha kvar den).','Ny profil')){beginChange();doc.pts=[];doc.closed=false;clearSel();changed()}return}
+    await placeFromPreview();return}
+  if(ui.tool==='select'&&!(e.ctrlKey||e.metaKey)&&hitVertex(m.x,m.y)==null){const mi=hitMid(m.x,m.y);
+    if(mi!=null){beginChange();const E=edgesOf(doc.pts,doc.closed)[mi];const mp=mul(add(doc.pts[E[0]],doc.pts[E[1]]),.5);const j=insertOnEdge(mi,mp);
+      clearSel();ui.selV.add(j);ui.drag={ids:[j],ai:j,anchor:P2(doc.pts[j].x,doc.pts[j].y),start:inv(m.x,m.y),orig:[P2(doc.pts[j].x,doc.pts[j].y)],moved:false,inserted:true};
+      svg.setPointerCapture(e.pointerId);toast('Ny punkt mitt på linjen – dra för att flytta den.');changed();return}}
+  if(ui.tool==='select'){const v=hitVertex(m.x,m.y);const ed=v==null?hitEdge(m.x,m.y):null;const multi=e.ctrlKey||e.metaKey;
+    if(v==null&&ed==null){if(!multi)clearSel();renderAll();return}
+    const id=v!=null?v:ed,cur=()=>v!=null?ui.selV:ui.selE;
+    if(multi){if(cur().has(id)){cur().delete(id);renderAll();return}cur().add(id)}
+    else if(!cur().has(id)){clearSel();cur().add(id)}
+    if(ed!=null){const row=document.querySelector(`#segBody tr[data-i="${ed}"]`);if(row)row.scrollIntoView({block:'nearest'})}
+    const ids=movingSet();const E=edgesOf(doc.pts,doc.closed);
+    let ai=v!=null?v:(len(sub(T(doc.pts[E[ed][0]]),m))<len(sub(T(doc.pts[E[ed][1]]),m))?E[ed][0]:E[ed][1]);
+    let en=null;if(ed!=null){const A=doc.pts[E[ed][0]],B=doc.pts[E[ed][1]];const dd=nrm(sub(B,A));en=P2(-dd.y,dd.x);if(Math.abs(en.x)<1e-9)en.x=0;if(Math.abs(en.y)<1e-9)en.y=0}
+    beginChange();ui.drag={en,ids,ai,anchor:P2(doc.pts[ai].x,doc.pts[ai].y),start:inv(m.x,m.y),orig:ids.map(i=>P2(doc.pts[i].x,doc.pts[i].y)),moved:false};
+    svg.setPointerCapture(e.pointerId);renderAll()}
+});
+svg.addEventListener('pointermove',e=>{
+  const m=mpos(e);ui.mouse=m;ui.alt=e.altKey;
+  if(ui.pan){view.ox=ui.pan.ox+(m.x-ui.pan.m.x);view.oy=ui.pan.oy+(m.y-ui.pan.m.y);renderCanvas();return}
+  if(ui.drag&&ui.drag.en){/* drar man i en linje flyttas den bara vinkelrätt mot sig själv – vinklarna i hörnen behålls */
+    const P=doc.pts,dr=ui.drag,en=dr.en;const c=inv(m.x,m.y);let dist=dot(sub(c,dr.start),en);const tol=alignTol();
+    if(en.x===0||en.y===0){const ax=en.x!==0?'x':'y',sg=en.x!==0?en.x:en.y;let v=snapLen(dr.anchor[ax]+dist*sg);
+      P.forEach((q,i)=>{if(!dr.ids.includes(i)&&Math.abs(q[ax]-v)<tol)v=q[ax]});dist=(v-dr.anchor[ax])*sg}
+    else dist=snapLen(dist);
+    const d=lockDelta(dr.ids,dr.orig,mul(en,dist));dr.ids.forEach((i,k)=>{P[i].x=r6(dr.orig[k].x+d.x);P[i].y=r6(dr.orig[k].y+d.y)});dr.moved=len(d)>1e-9;enforceAngles(dr.ids);renderCanvas();renderTable();return}
+  if(ui.drag){const P=doc.pts,dr=ui.drag;const c=inv(m.x,m.y);let d=sub(c,dr.start);
+    if(e.shiftKey){if(Math.abs(d.x)>Math.abs(d.y))d.y=0;else d.x=0}
+    let an=add(dr.anchor,d);if(d.x!==0||!e.shiftKey)an.x=snapLen(an.x);if(d.y!==0||!e.shiftKey)an.y=snapLen(an.y);
+    const tol=alignTol();P.forEach((q,i)=>{if(dr.ids.includes(i))return;if(Math.abs(q.x-an.x)<tol)an.x=q.x;if(Math.abs(q.y-an.y)<tol)an.y=q.y});
+    if(e.shiftKey){if(d.x===0)an.x=dr.anchor.x;if(d.y===0)an.y=dr.anchor.y}
+    d=lockDelta(dr.ids,dr.orig,sub(an,dr.anchor));dr.ids.forEach((i,k)=>{P[i].x=dr.orig[k].x+d.x;P[i].y=dr.orig[k].y+d.y});dr.moved=len(d)>1e-9;enforceAngles(dr.ids);renderCanvas();renderTable();return}
+  if(ui.tool==='select'){const v=hitVertex(m.x,m.y);ui.hoverV=v;ui.hoverMid=v==null?hitMid(m.x,m.y):null;ui.hoverE=v==null?(hitEdge(m.x,m.y)??(ui.hoverMid!=null?ui.hoverMid:(ui.hoverE!=null&&len(sub(midHandle(ui.hoverE),m))<24?ui.hoverE:null))):null;if(ui.hoverMid!=null){svg.style.cursor='copy';renderCanvas();return}svg.style.cursor=(v!=null||ui.hoverE!=null)?'move':'default'}
+  else{ui.hoverV=ui.hoverE=null;svg.style.cursor=ui.tool==='pan'?'grab':'crosshair'}
+  renderCanvas()});
+svg.addEventListener('pointerup',e=>{
+  if(ui.pan){ui.pan=null;return}
+  if(ui.drag){const dr=ui.drag;if(!dr.moved&&!dr.inserted)undoS.pop();else if(!dr.en){const n=doc.pts.length;edgesOf(doc.pts,doc.closed).forEach(([ia,ib],i)=>{const av=doc.pts[i].av;if(av&&(dr.ids.includes(ia)||dr.ids.includes(ib))){const st=avState(i);av.deg=st.deg;av.side=st.side}})}ui.drag=null;changed()}});
+svg.addEventListener('pointerleave',()=>{if(!ui.drag&&!ui.pan){ui.mouse=null;renderCanvas()}});
+svg.addEventListener('contextmenu',e=>{e.preventDefault();const m=mpos(e);
+  const dk=e.target.closest&&e.target.closest('[data-key]');
+  if(dk){const k=dk.dataset.key;const hid=(doc.hidden||[]).includes(k);const c=$('#ctx');const mt=dimMeta.get(k);
+    if(mt){let h='<div class="h">Kedjemått</div>';
+      if(mt.canHide)h+=`<button data-hide="${esc(mt.hideKey)}"><span class="ck">⊘</span>Dölj – slå ihop med måttet bredvid</button>`;
+      if(mt.inner.length)h+=`<button data-unhide="${esc(mt.inner.join('|'))}"><span class="ck">👁</span>Dela upp igen (${mt.inner.length+1} mått)</button>`;
+      if(!mt.canHide&&!mt.inner.length)h+='<div class="h">Det här är hela kedjan – dölj totalmåttet eller stäng av totalmått i stället.</div>';
+      c.innerHTML=h;c.style.display='block';const W=svg.getBoundingClientRect();c.style.left=Math.max(4,Math.min(m.x,W.width-c.offsetWidth-8))+'px';c.style.top=Math.max(4,Math.min(m.y,W.height-c.offsetHeight-8))+'px';return}
+    c.innerHTML=`<div class="h">Mått</div><button data-hide="${esc(k)}"><span class="ck">${hid?'👁':'⊘'}</span>${hid?'Visa måttet på ritningen':'Dölj måttet på ritningen'}</button>`;
+    c.style.display='block';const W=svg.getBoundingClientRect();c.style.left=Math.max(4,Math.min(m.x,W.width-c.offsetWidth-8))+'px';c.style.top=Math.max(4,Math.min(m.y,W.height-c.offsetHeight-8))+'px';return}
+  const ed=hitEdge(m.x,m.y);if(ed==null){closeCtx();return}
+  if(!ui.selE.has(ed)){clearSel();ui.selE.add(ed)}const ids=[...ui.selE];renderAll();
+  const cur=new Set(ids.map(i=>doc.pts[i].s||''));const one=cur.size===1?[...cur][0]:null;
+  let h=`<div class="h">Yta för ${ids.length>1?ids.length+' linjer':'linje '+(ed+1)}</div>`;
+  Object.keys(SURF).forEach(k=>{h+=`<button data-s="${k}"><span class="ck">${one===k?'✓':''}</span><svg width="30" height="12" style="overflow:visible">${surfSample(1,2,28,k,3.4,'#1d2733',1.4)}</svg>${SURF[k].name}</button>`});
+  h+=`<hr><button data-s=""><span class="ck">${one===''?'✓':''}</span>Ingen angiven yta</button>`;
+  {const inf=edgeInfo(ed);const L1=inf.hor?'vänster':'övre',L2=inf.hor?'höger':'nedre',U=inf.hor?'uppåt':'åt höger',D=inf.hor?'nedåt':'åt vänster';
+    const ar=inf.hor?[['↗','↘'],['↖','↙']]:[['↘','↙'],['↗','↖']];
+    h+=`<hr><button data-groove="${ed}"><span class="ck">⊔</span>Lägg till spår i linjen…</button>`;
+    h+=`<hr><div class="h">Vinkel på linje ${ed+1} (hyvelstål)</div><div class="angrow"><input id="ctxAng" type="text" value="${fmt(inf.cur)}"><span>° från ${inf.hor?'vågrätt':'lodrätt'}</span></div>`;
+    h+=`<button data-ang="${inf.first},1"><span class="ck">${ar[0][0]}</span>Fast ${L1} ände – lutar ${U}</button>`;
+    h+=`<button data-ang="${inf.first},-1"><span class="ck">${ar[0][1]}</span>Fast ${L1} ände – lutar ${D}</button>`;
+    h+=`<button data-ang="${inf.second},1"><span class="ck">${ar[1][0]}</span>Fast ${L2} ände – lutar ${U}</button>`;
+    h+=`<button data-ang="${inf.second},-1"><span class="ck">${ar[1][1]}</span>Fast ${L2} ände – lutar ${D}</button>`}
+  const c=$('#ctx');c.innerHTML=h;c.dataset.ids=ids.join(',');c.dataset.edge=ed;c.style.display='block';
+  const W=svg.getBoundingClientRect();c.style.left=Math.max(4,Math.min(m.x,W.width-c.offsetWidth-8))+'px';c.style.top=Math.max(4,Math.min(m.y,W.height-c.offsetHeight-8))+'px'});
+$('#ctx').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.groove!==undefined){grooveForm(+b.dataset.groove);return}
+  if(b.dataset.unhide){beginChange();const rm=new Set(b.dataset.unhide.split('|'));doc.hidden=(doc.hidden||[]).filter(k=>!rm.has(k));closeCtx();changed();return}
+  if(b.dataset.hide!==undefined){const k=b.dataset.hide;beginChange();const h=new Set(doc.hidden||[]);h.has(k)?h.delete(k):h.add(k);doc.hidden=[...h];closeCtx();changed();return}
+  if(b.dataset.ang){const deg=num($('#ctxAng').value);if(!(deg>=0&&deg<90)){toast('Skriv en vinkel mellan 0 och 89,9 grader.');return}
+    const [pv,side]=b.dataset.ang.split(',').map(Number);beginChange();if(setEdgeAngle(+$('#ctx').dataset.edge,deg,pv,side)){closeCtx();changed()}else undoS.pop();return}
+  if(b.dataset.s===undefined)return;
+  const ids=$('#ctx').dataset.ids.split(',').map(Number);
+  beginChange();ids.forEach(i=>{if(doc.pts[i])doc.pts[i].s=b.dataset.s});closeCtx();changed();if(b.dataset.s)toast(SURF[b.dataset.s].name+' på '+(ids.length>1?ids.length+' linjer':'linjen')+'.')});
+function closeCtx(){$('#ctx').style.display='none'}
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#ctx'))closeCtx()},true);
+svg.addEventListener('wheel',e=>{e.preventDefault();const m=mpos(e);const p=inv(m.x,m.y);const f=Math.exp(-e.deltaY*0.0015);
+  view.z=Math.max(0.05,Math.min(400,view.z*f));view.ox=m.x-p.x*view.z;view.oy=m.y+p.y*view.z;renderCanvas()},{passive:false});
+
+/* mått-editor på ritytan */
+let curEdit=null;
+function openDimEdit(idx){const t=editTargets[idx];if(!t)return;curEdit=t;const inp=$('#dimEdit');
+  inp.style.display='block';inp.style.left=(t.p.x-42)+'px';inp.style.top=(t.p.y-16)+'px';inp.value=t.text;inp.focus();inp.select()}
+$('#dimEdit').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){const v=num(e.target.value);const t=curEdit;closeDimEdit();if(t)applyEdit(t,v)}else if(e.key==='Escape')closeDimEdit()});
+$('#dimEdit').addEventListener('blur',()=>closeDimEdit());
+function closeDimEdit(){$('#dimEdit').style.display='none';curEdit=null}
+
+/* tangentbord */
+document.addEventListener('keydown',async e=>{
+  const tg=e.target;const typing=tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA'||tg.tagName==='SELECT');
+  if((e.ctrlKey||e.metaKey)&&!typing){if(e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return}if(e.key.toLowerCase()==='y'){e.preventDefault();redo();return}}
+  if(typing||ui.tab!=='draw')return;
+  if(e.key===' '){ui.space=true;e.preventDefault();return}
+  if(e.key==='Alt'){ui.alt=true;e.preventDefault();renderCanvas();return}
+  const drawing=ui.tool==='draw'&&doc.pts.length&&!doc.closed;
+  if(drawing&&/^[0-9.,<\-]$/.test(e.key)){ui.buf+=e.key;renderCanvas();e.preventDefault();return}
+  if(drawing&&e.key==='Enter'){if(ui.buf)await placeFromPreview();else setTool('select');return}
+  if(drawing&&e.key==='Backspace'){e.preventDefault();if(ui.buf){ui.buf=ui.buf.slice(0,-1);renderCanvas()}else{beginChange();doc.pts.pop();changed()}return}
+  if(e.key==='Escape'&&$('#ctx').style.display==='block'){closeCtx();return}
+  if(e.key==='Escape'){if(ui.buf){ui.buf='';renderCanvas()}else setTool('select');return}
+  if((e.key==='Delete'||e.key==='Backspace')&&ui.tool==='select'&&ui.selV.size){e.preventDefault();delVertices([...ui.selV]);return}
+  if(ui.tool==='select'&&e.key.startsWith('Arrow')&&(ui.selV.size||ui.selE.size)){e.preventDefault();const st=ui.snapL*(e.shiftKey?10:1);
+    const d0={ArrowRight:P2(st,0),ArrowLeft:P2(-st,0),ArrowUp:P2(0,st),ArrowDown:P2(0,-st)}[e.key];const ids=movingSet();const d=lockDelta(ids,ids.map(i=>P2(doc.pts[i].x,doc.pts[i].y)),d0);if(len(d)<1e-12)return;beginChange();ids.forEach(i=>{doc.pts[i].x+=d.x;doc.pts[i].y+=d.y});changed();return}
+  const k=e.key.toLowerCase();if(k==='d')setTool('draw');else if(k==='v')setTool('select');else if(k==='h')setTool('pan');else if(k==='f')fitView()});
+document.addEventListener('keyup',e=>{if(e.key===' ')ui.space=false;if(e.key==='Alt'){ui.alt=false;renderCanvas()}});
+
+function delVertices(js){if(doc.closed&&doc.pts.length-js.length<3){toast('En stängd profil behöver minst 3 hörn.');return}beginChange();js.sort((a,b)=>b-a).forEach(j=>doc.pts.splice(j,1));if(doc.pts.length<3)doc.closed=false;clearSel();changed()}
+function delVertex(j){const P=doc.pts;if(doc.closed&&P.length<=3){toast('En stängd profil behöver minst 3 hörn.');return}
+  beginChange();P.splice(j,1);if(P.length<3)doc.closed=false;clearSel();changed()}
+function setTool(t){ui.tool=t;ui.buf='';document.querySelectorAll('#tools button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));renderCanvas()}
+
+/* ===================== Sträcklistan ===================== */
+function clampInfo(j,kind){const f=filletAt(doc.pts,doc.closed,j);if(!f||!f.clamped||(kind==='c')!==!!f.chamfer)return '"';return ';border-color:#c2410c;color:#c2410c" title="Får bara plats med '+(f.chamfer?'fas '+fmt(f.c):'R'+fmt(f.r))+' här – sidan är för kort"'}
+function renderTable(){
+  const P=doc.pts,n=P.length;const ae=document.activeElement;const keep=ae&&ae.dataset&&ae.dataset.key;
+  const m=n<2?0:(doc.closed?n:n-1);let rows='';
+  for(let i=0;i<m;i++){const a=P[i],b=P[(i+1)%n],v=sub(b,a),L=len(v),ang=angDeg(v);const auto=doc.closed&&i===n-1;const vb=(i+1)%n;const rOK=doc.closed||vb<n-1;
+    const sf=SURF[a.s];rows+=`<tr data-i="${i}" class="${ui.selE.has(i)?'sel':''}"><td class="num" title="${sf?sf.name:''}">${sf?`<b style="color:#1d2733">${sf.k}</b> `:''}${i+1}</td>
+      <td><div class="dircell"><span class="arrow" style="transform:rotate(${-ang}deg)">→</span><input data-key="a${i}" data-f="ang" value="${fmt(ang)}" ${auto?'disabled':''}></div></td>
+      <td><input data-key="l${i}" data-f="len" value="${fmt(L)}" ${auto?'disabled':''}></td>
+      <td>${rOK?`<input data-key="r${i}" data-f="r" value="${P[vb].r?fmt(P[vb].r):''}" placeholder="–" style="width:34px${clampInfo(vb,'r')}>`:''}</td>
+      <td>${rOK?`<input data-key="c${i}" data-f="fas" value="${P[vb].c>0&&!P[vb].r?fmt(P[vb].c):''}" placeholder="–" style="width:34px${clampInfo(vb,'c')}>`:''}</td>
+      <td>${auto?'<span class="autolbl" title="Sista sträckan räknas ut automatiskt när profilen är stängd">auto</span>':`<button class="x" data-f="del" title="Ta bort hörnet där sträckan slutar">×</button>`}</td></tr>`}
+  $('#segBody').innerHTML=rows;
+  $('#segInfo').textContent=!n?'Ingen profil ännu. Skriv en längd och klicka en riktningspil, eller rita på ytan.':
+    (doc.closed?`Stängd profil, ${n} hörn. Ändrar du en längd töjs profilen i den riktningen.`:`Öppen profil, ${n} hörn${n>=3?' – stäng när du är klar':''}.`);
+  {const b=n>=2?bbox(P):null;$('#lockInfo').textContent=b?'('+fmt(b.maxX-b.minX)+' × '+fmt(b.maxY-b.minY)+')':'';$('#lockBox').checked=!!doc.lock;$('#lockBox').disabled=!doc.closed}
+  {const h=(doc.hidden||[]).length;$('#hidRow').style.display=h?'flex':'none';$('#hidInfo').textContent=h+(h===1?' dolt mått':' dolda mått')}
+  $('#closeBtn').disabled=doc.closed||n<3;$('#openBtn').disabled=!doc.closed;
+  if(keep){const el=document.querySelector(`[data-key="${keep}"]`);if(el){el.focus();if(el.select)el.select()}}
+}
+$('#segBody').addEventListener('change',e=>{const t=e.target;const tr=t.closest('tr');if(!tr)return;const i=+tr.dataset.i;const f=t.dataset.f;const v=num(t.value);const P=doc.pts,n=P.length;
+  if(f==='len'){if(!(v>0)){toast('Längden måste vara större än 0.');renderTable();return}beginChange();if(setSegLen(i,v)===false){undoS.pop();renderTable();return}changed()}
+  else if(f==='ang'){if(!isFinite(v)){renderTable();return}beginChange();setSegAngWrap(i,v);changed()}
+  else if(f==='r'){beginChange();const j=(i+1)%n;P[j].r=isFinite(v)&&v!==0?v:0;if(P[j].r)P[j].c=0;changed();const fa=filletAt(P,doc.closed,j);if(fa&&fa.clamped)toast('R'+fmt(Math.abs(v))+' får inte plats – sidan är för kort. Ritar R'+fmt(fa.r)+'.',4000)}
+  else if(f==='fas'){beginChange();const j=(i+1)%n;P[j].c=isFinite(v)&&v>0?v:0;if(P[j].c)P[j].r=0;changed();const fa=filletAt(P,doc.closed,j);if(fa&&fa.chamfer&&fa.clamped)toast('Fas '+fmt(v)+' får inte plats – sidan är för kort. Ritar fas '+fmt(fa.c)+'.',4000)}});
+$('#segBody').addEventListener('click',e=>{const b=e.target.closest('[data-f="del"]');if(b){delVertex((+b.closest('tr').dataset.i+1)%doc.pts.length);return}
+  const tr=e.target.closest('tr');if(tr&&e.target.tagName!=='INPUT'){const i=+tr.dataset.i;if(e.ctrlKey||e.metaKey){ui.selE.has(i)?ui.selE.delete(i):ui.selE.add(i)}else{clearSel();ui.selE.add(i)}renderAll()}});
+$('#segBody').addEventListener('focusin',e=>{const tr=e.target.closest('tr');if(tr){const i=+tr.dataset.i;if(!ui.selE.has(i)){clearSel();ui.selE.add(i);document.querySelectorAll('#segBody tr').forEach(r=>r.classList.toggle('sel',r===tr))}renderCanvas()}});
+$('#segBody').addEventListener('mouseover',e=>{const tr=e.target.closest('tr');ui.hoverE=tr?+tr.dataset.i:null;renderCanvas()});
+$('#segBody').addEventListener('mouseleave',()=>{ui.hoverE=null;renderCanvas()});
+$('#dirs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(doc.closed){toast('Profilen är stängd. Klicka "Öppna profilen" för att lägga till sträckor.');return}
+  const L=num($('#newLen').value);if(!(L>0)){toast('Skriv längden först, sedan klickar du riktningen.');$('#newLen').focus();return}
+  beginChange();const P=doc.pts;if(!P.length)P.push({x:0,y:0,r:0});const A=P[P.length-1];const a=+b.dataset.a*Math.PI/180;
+  P.push({x:r6(A.x+Math.cos(a)*L),y:r6(A.y+Math.sin(a)*L),r:0});changed();if(P.length===2)fitView();$('#newLen').focus();$('#newLen').select()});
+$('#newLen').addEventListener('keydown',e=>{const map={ArrowRight:0,ArrowUp:90,ArrowLeft:180,ArrowDown:270};if(e.key in map){e.preventDefault();document.querySelector(`#dirs [data-a="${map[e.key]}"]`).click()}});
+$('#closeBtn').onclick=()=>{if(doc.pts.length<3)return;beginChange();const P=doc.pts;if(len(sub(P[P.length-1],P[0]))<1e-6)P.pop();doc.closed=true;changed()};
+$('#openBtn').onclick=()=>{beginChange();doc.closed=false;changed()};
+$('#clearBtn').onclick=async()=>{if(!doc.pts.length)return;if(await ask('Rensa profilen? (Ångra fungerar.)','Rensa')){beginChange();doc.pts=[];doc.closed=false;clearSel();changed();setTool('draw')}};
+$('#rectBtn').onclick=async()=>{const w=num($('#rectW').value),h=num($('#rectH').value);if(!(w>0&&h>0)){toast('Ange bredd och höjd.');return}
+  if(doc.pts.length&&!(await ask('Ersätta nuvarande profil med en rektangel?','Ersätt')))return;
+  beginChange();doc.pts=[[0,0],[w,0],[w,h],[0,h]].map(p=>({x:p[0],y:p[1],r:0}));doc.closed=true;doc.lock=true;changed();toast('Yttermåttet '+fmt(w)+' × '+fmt(h)+' är låst. Allt du ändrar sker inom det.',3500);fitView();setTool('select')};
+$('#demoBtn').onclick=async()=>{if(doc.pts.length&&!(await ask('Ersätta nuvarande ritning med exemplet?','Ersätt')))return;beginChange();loadDoc(demoDoc());changed();fitView();setTool('select')};
+
+/* ===================== Inställningar & titelblock ===================== */
+$('#tools').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setTool(b.dataset.t)});
+$('#snapA').onchange=e=>{ui.snapA=+e.target.value;renderCanvas()};
+$('#snapL').onchange=e=>{ui.snapL=+e.target.value;renderCanvas()};
+$('#dimStyle').onchange=e=>{doc.dim.style=e.target.value;changed()};
+$('#dimAng').onchange=e=>{doc.dim.angles=e.target.checked;changed()};
+$('#dimTot').onchange=e=>{doc.dim.totals=e.target.checked;changed()};
+$('#dimRad').onchange=e=>{doc.dim.radii=e.target.checked;changed()};
+$('#hidAll').onclick=()=>{beginChange();doc.hidden=[];changed()};
+$('#lockBox').onchange=e=>{beginChange();doc.lock=e.target.checked;changed()};
+document.querySelectorAll('#right [data-t]').forEach(el=>el.addEventListener('input',()=>{doc.title[el.dataset.t]=el.value;changed()}));
+$('#finger').onchange=e=>{beginChange();doc.finger=e.target.value;changed();if(ui.tab!=='sheet'&&doc.finger)toast('Fingerskarven syns i 3D-vyn under fliken Ritningsblad A4.')};
+$('#kShow').onchange=e=>{doc.kutter.show=e.target.checked;changed();if(e.target.checked&&ui.tab!=='sheet')toast('Kutterbestyckningen visas på fliken Ritningsblad A4.')};
+document.querySelectorAll('#right [data-k]').forEach(el=>el.addEventListener('input',()=>{doc.kutter.rows[+el.dataset.k][el.dataset.kf]=el.value;changed()}));
+$('#kOvr').addEventListener('input',e=>{doc.kutter.ovrigt=e.target.value;changed()});
+$('#shMirror').onchange=e=>{beginChange();doc.sheet.mirror=e.target.checked;changed();if(ui.tab!=='sheet')toast('Vändningen syns på fliken Ritningsblad A4.')};
+$('#shMont').onchange=e=>{beginChange();doc.sheet.mont=e.target.value;changed();if(ui.tab!=='sheet'&&e.target.value)toast('Monteringen syns på fliken Ritningsblad A4.')};
+$('#fitBtn').onclick=fitView;
+$('#undo').onclick=undo;$('#redo').onclick=redo;
+function syncFields(){document.querySelectorAll('#right [data-t]').forEach(el=>el.value=doc.title[el.dataset.t]||'');
+  $('#shMirror').checked=!!doc.sheet.mirror;$('#shMont').value=doc.sheet.mont||'';$('#lockBox').checked=!!doc.lock;$('#finger').value=doc.finger||'';$('#kShow').checked=doc.kutter.show;document.querySelectorAll('#right [data-k]').forEach(el=>el.value=doc.kutter.rows[+el.dataset.k][el.dataset.kf]);$('#kOvr').value=doc.kutter.ovrigt;$('#dimStyle').value=doc.dim.style;$('#dimRad').checked=doc.dim.radii!==false;$('#dimAng').checked=doc.dim.angles;$('#dimTot').checked=doc.dim.totals}
+
+/* ===================== Ritningsblad A4 ===================== */
+const SCALES=[50,20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01];
+function pickScale(w,h,aw,ah){for(const s of SCALES)if(w*s<=aw&&h*s<=ah)return s;return SCALES[SCALES.length-1]}
+const fmtScale=s=>s>=1?`${s}:1`:`1:${Math.round(1/s)}`;
+const FONT='Helvetica, Arial, sans-serif';
+function sText(x,y,t,size,o){o=o||{};return `<text x="${f3(x)}" y="${f3(y)}" font-size="${size}" font-family="${FONT}" fill="#000"${o.bold?' font-weight="bold"':''} text-anchor="${o.anchor||'start'}"${o.rot?` transform="rotate(${o.rot} ${f3(x)} ${f3(y)})"`:''}>${esc(t)}</text>`}
+function sLine(a,b,w,dash){return `<line x1="${f3(a.x)}" y1="${f3(a.y)}" x2="${f3(b.x)}" y2="${f3(b.y)}" stroke="#000" stroke-width="${w}"${dash?` stroke-dasharray="${dash}"`:''}/>`}
+function sRect(x,y,w,h,sw){return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#000" stroke-width="${sw}"/>`}
+const sheetSt={u:1,fs:2.6,col:'#000',lw:0.18,get hidden(){return new Set(doc.hidden||[])}};
+
+function titleBlock(){const t=doc.title;let s='';const x=107,y=170;
+  const cell=(cx,cy,w,h,label,val,o)=>{s+=sRect(cx,cy,w,h,0.25);s+=sText(cx+1,cy+2.2,label,1.7);
+    let v=String(val||'');const max=Math.floor((w-2)/((o&&o.size||3)*0.55));if(v.length>max)v=v.slice(0,max-1)+'…';s+=sText(cx+1.2,cy+h-1.6,v,(o&&o.size)||3,o)};
+  cell(x,y,120,8,'Benämning',t.benamning,{size:3.6,bold:true});cell(x+120,y,60,8,'Ritn.nr',t.ritnr,{size:3.4});
+  cell(x,y+8,60,7.5,'Kund',t.kund);cell(x+60,y+8,60,7.5,'Förfrågan / order',t.forfragan);cell(x+120,y+8,20,7.5,'Rev',t.rev);cell(x+140,y+8,40,7.5,'Skala',sheetScaleText);
+  cell(x,y+15.5,120,7.5,'Material',t.material);cell(x+120,y+15.5,60,7.5,'Datum',t.datum);
+  cell(x,y+23,60,7,'Ritad av',t.ritadAv);s+=sRect(x+60,y+23,120,7,0.25);s+=sText(x+120,y+28.2,'NORSJÖ TRÄ AB',3.6,{bold:true,anchor:'middle'});
+  // anmärkning
+  s+=sRect(10,170,97,30,0.25);s+=sText(11,172.2,'Anmärkning',1.7);
+  const words=String(t.anm||'').split(/\s+/).filter(Boolean);let lines=[],cur='';words.forEach(w=>{if((cur+' '+w).trim().length>52){lines.push(cur);cur=w}else cur=(cur+' '+w).trim()});if(cur)lines.push(cur);
+  lines.slice(0,5).forEach((l,i)=>s+=sText(11.5,176.5+i*3.9,l,2.8));
+  s+=sText(11.5,198.5,'Alla mått i mm.',2.2);
+  return s}
+let sheetScaleText='';
+
+function dimsExtent(D,Q,fs){const pts=Q.slice();D.lins.forEach(d=>{pts.push(d.D1,d.D2);const m=mul(add(d.D1,d.D2),.5);const tw=d.text.length*fs*0.6;
+    pts.push(add(m,P2(-tw/2-1,-fs-2)),add(m,P2(tw/2+1,fs+2)),add(m,P2(-fs-2,-tw/2-1)),add(m,P2(fs+2,tw/2+1)))});
+  D.angs.forEach(a=>{const t=add(a.V,mul(nrm(add(a.ref,a.ds)),13));pts.push(add(t,P2(-5,-3)),add(t,P2(5,3)))});
+  (D.chams||[]).forEach(c=>{const e=add(c.mid,mul(c.n,12));pts.push(add(e,P2(c.n.x>=0?14:-14,-3)))});
+  D.rads.forEach(r=>{const dir=r.dir;const e=add(r.M,mul(dir,9));pts.push(add(e,P2(dir.x>=0?10:-10,-3)))});return bbox(pts)}
+function sheetLayout(){const b=bbox(densePts(doc.pts,doc.closed));const W=b.maxX-b.minX,H=b.maxY-b.minY;
+  /* breda, låga profiler: ändvy överst och 3D under. Annars sida vid sida */
+  const Wv=doc.kutter.show?200:267;/* med kutterbestyckning tar tabellen högerkanten */
+  const mo=!!(doc.sheet.mont&&doc.closed);
+  if(W>1.6*H){if(!mo)return {prof:{x:15,y:16,w:Wv,h:86},iso:{x:15,y:108,w:Wv,h:52}};
+    const h1=Math.round(Wv/2);return {prof:{x:15,y:16,w:Wv,h:80},iso:{x:15,y:104,w:h1-4,h:56},mont:{x:15+h1+4,y:104,w:Wv-h1-4,h:56}}}
+  if(!mo)return {prof:{x:15,y:16,w:Math.round(Wv*0.63),h:144},iso:{x:15+Math.round(Wv*0.63)+7,y:16,w:Wv-Math.round(Wv*0.63)-7,h:144}};
+  const c1=Math.round(Wv*0.46),c2=Math.round((Wv-c1)/2);return {prof:{x:15,y:16,w:c1,h:144},iso:{x:15+c1+6,y:16,w:c2-6,h:144},mont:{x:15+c1+c2+6,y:16,w:Wv-c1-c2-6,h:144}}}
+/* Montering: hur långt bit 2 ska flyttas för att ligga an mot bit 1 (glid in tills de tar i varandra) */
+function fitOffset(P,axis){const o=axis==='x'?'y':'x';const vals=uniqSorted(P.map(p=>p[o]),0.01);let best=-Infinity;
+  for(let k=0;k<vals.length-1;k++){const v=(vals[k]+vals[k+1])/2;const [lo,hi]=extentAt(P,true,o,v);if(!isFinite(lo))continue;best=Math.max(best,hi-lo)}
+  return isFinite(best)?best:0}
+function montView(R){const P=doc.pts,ax=doc.sheet.mont;const dd=fitOffset(P,ax);const Pb=P.map(p=>Object.assign({},p,ax==='x'?{x:p.x+dd}:{y:p.y+dd}));
+  const b=bbox(densePts(P,true).concat(densePts(Pb,true)));const bw=b.maxX-b.minX,bh=b.maxY-b.minY;
+  const s=pickScale(bw,bh,R.w-10,R.h-22);const cx=R.x+R.w/2,cy=R.y+(R.h-14)/2;const mx=(b.minX+b.maxX)/2,my=(b.minY+b.maxY)/2;
+  const Tm=p=>P2(cx+(p.x-mx)*s,cy-(p.y-my)*s);let o='';
+  o+=`<path d="${outlinePath(P,true,Tm,s)}" fill="rgb(240,226,200)" stroke="#000" stroke-width="0.45" stroke-linejoin="round"/>`;
+  o+=`<path d="${outlinePath(Pb,true,Tm,s)}" fill="rgb(214,192,152)" stroke="#000" stroke-width="0.45" stroke-linejoin="round"/>`;
+  const bb=bbox(P);let D={lins:[],angs:[],rads:[]};
+  if(ax==='x'){const y=Tm(P2(0,bb.minY)).y,F1=Tm(P2(bb.minX,bb.minY)),F2=Tm(P2(bb.minX+dd,bb.minY));D.lins.push({F1,F2,D1:P2(F1.x,y+7),D2:P2(F2.x,y+7),text:fmt(dd),g:{spans:[]}})}
+  else{const x=Tm(P2(bb.maxX,0)).x,F1=Tm(P2(bb.maxX,bb.minY)),F2=Tm(P2(bb.maxX,bb.minY+dd));D.lins.push({F1,F2,D1:P2(x+7,F1.y),D2:P2(x+7,F2.y),text:fmt(dd),g:{spans:[]}})}
+  o+=renderDims(D,{u:1,fs:2.6,col:'#000',lw:0.18},false);
+  const top=Tm(P2(0,b.minY)).y;o+=sText(R.x+R.w/2,Math.min(R.y+R.h,top+(ax==='x'?14:6)),'MONTERING – '+(ax==='x'?'täckande bredd ':'täckande höjd ')+fmt(dd)+'   SKALA '+fmtScale(s),2.8,{bold:true,anchor:'middle'});
+  return o}
+function mirrorKey(k,b){/* vänd 180°: x och y speglas, och sidan en kedja ligger på byts (under↔över, höger↔vänster) */
+  const mx=v=>f3(b.minX+b.maxX-(+v)),my=v=>f3(b.minY+b.maxY-(+v));let m;
+  if((m=k.match(/^bx\d?:(.+)$/)))return 'bx:'+mx(m[1]);
+  if((m=k.match(/^by\d?:(.+)$/)))return 'by:'+my(m[1]);
+  if((m=k.match(/^cx(\d)(t?):(.+):(.+)$/)))return 'cx'+(m[2]?m[1]:1-m[1])+m[2]+':'+mx(m[4])+':'+mx(m[3]);
+  if((m=k.match(/^cy(\d)(t?):(.+):(.+)$/)))return 'cy'+(m[2]?m[1]:1-m[1])+m[2]+':'+my(m[4])+':'+my(m[3]);
+  if((m=k.match(/^([raf]):(.+),(.+)$/)))return m[1]+':'+mx(m[2])+','+my(m[3]);
+  if((m=k.match(/^s:(.+),(.+):(.+),(.+)$/)))return 's:'+mx(m[1])+','+my(m[2])+':'+mx(m[3])+','+my(m[4]);
+  return k}
+function wrapText(t,max){const out=[];String(t||'').split(/\n/).forEach(par=>{let cur='';par.split(/\s+/).filter(Boolean).forEach(w=>{if((cur+' '+w).trim().length>max){if(cur)out.push(cur);cur=w}else cur=(cur+' '+w).trim()});out.push(cur)});while(out.length&&!out[out.length-1])out.pop();return out}
+function kutterTable(){const k=doc.kutter;const x=220,y=16,w=67,c1=13,c3=15,rh=6.2;let o='';const fit=(t,mm,fs)=>{t=String(t||'').trim()||'–';const max=Math.floor(mm/(fs*0.55));return t.length>max?t.slice(0,max-1)+'…':t};
+  o+=sText(x,y+3,'KUTTERBESTYCKNING',2.8,{bold:true});let yy=y+5;
+  o+=`<rect x="${x}" y="${yy}" width="${w}" height="${rh}" fill="#eee" stroke="#000" stroke-width="0.25"/>`;
+  o+=sText(x+1.2,yy+4.2,'Kutter',2.3,{bold:true})+sText(x+c1+1.2,yy+4.2,'Verktyg',2.3,{bold:true})+sText(x+w-c3+1.2,yy+4.2,'Schims',2.3,{bold:true});yy+=rh;
+  k.rows.forEach((r,i)=>{o+=sRect(x,yy,w,rh,0.25)+sText(x+1.2,yy+4.2,String(i+1),2.6,{bold:true})+sText(x+c1+1.2,yy+4.2,fit(r.verktyg,w-c1-c3-2,2.5),2.5)+sText(x+w-c3+1.2,yy+4.2,fit(r.schims,c3-2,2.5),2.5);yy+=rh});
+  o+=sLine(P2(x+c1,y+5),P2(x+c1,yy),0.25)+sLine(P2(x+w-c3,y+5),P2(x+w-c3,yy),0.25);
+  const lines=wrapText(k.ovrigt,44);const bh=Math.max(14,5+lines.length*3.6+2);yy+=2;
+  o+=sRect(x,yy,w,bh,0.25)+sText(x+1.2,yy+2.6,'Övrigt / maskininstruktioner',1.9);lines.slice(0,Math.floor((166-yy-6)/3.6)).forEach((l,i)=>o+=sText(x+1.5,yy+6.4+i*3.6,l,2.5));
+  return o}
+function profileView(){const P=doc.pts;const R=sheetLayout().prof;const Dn=densePts(P,doc.closed),b=bbox(Dn);
+  const mx=(b.minX+b.maxX)/2,my=(b.minY+b.maxY)/2;let s=SCALES[SCALES.length-1],ex=null;
+  for(const sc of SCALES){const Tt=p=>P2((p.x-mx)*sc,-(p.y-my)*sc);const D=genDims(P,doc.closed,Tt,1,doc.dim);const e=dimsExtent(D,Dn.map(Tt),sheetSt.fs);
+    if(e.maxX-e.minX<=R.w&&e.maxY-e.minY<=R.h-5){s=sc;ex=e;break}}
+  sheetScaleText=fmtScale(s);
+  const cx=ex?R.x+(R.w-(ex.maxX-ex.minX))/2-ex.minX:R.x+R.w/2,cy=ex?R.y+(R.h-5-(ex.maxY-ex.minY))/2-ex.minY:R.y+R.h/2;
+  const Tp=p=>P2(cx+(p.x-mx)*s,cy-(p.y-my)*s);let o='';
+  o+=`<path d="${outlinePath(P,doc.closed,Tp,s)}" fill="none" stroke="#000" stroke-width="0.5" stroke-linejoin="round"/>`;
+  o+=surfTextures(P,doc.closed,Tp,1,'#000',0.4);
+  o+=surfMarkers(P,doc.closed,Tp,1,'#000');
+  o+=renderDims(genDims(P,doc.closed,Tp,1,doc.dim),sheetSt,false);
+  const us=usedSurf();if(us.length){const ly=ex?Math.min(R.y+R.h+3,cy+ex.maxY+5):R.y+R.h+3;const lbl='ÄNDVY'+(doc.sheet.mirror?' (SPEGELVÄND)':'')+'   SKALA '+fmtScale(s);let lx=(ex?cx+ex.minX:R.x)+lbl.length*2.8*0.62+8;
+    o+=sText(lx,ly,'YTOR:',2.6,{bold:true});lx+=11;const lx0=lx;let ly2=ly;us.forEach(k=>{const iw=14+SURF[k].name.length*2.6*0.56+6;if(lx+iw>R.x+R.w&&lx>lx0){lx=lx0;ly2+=4.6}const ly=ly2;o+=`<circle cx="${f3(lx+1.6)}" cy="${f3(ly-0.95)}" r="1.75" fill="#fff" stroke="#000" stroke-width="0.22"/>`+sText(lx+1.6,ly-0.15,SURF[k].k,2.3,{bold:true,anchor:'middle'})+surfSample(lx+4.5,ly-2.2,8,k,1,'#000',0.35)+sText(lx+14,ly,SURF[k].name,2.6);lx+=14+SURF[k].name.length*2.6*0.56+6})}
+  o+=sText(ex?cx+ex.minX:R.x,ex?Math.min(R.y+R.h+3,cy+ex.maxY+5):R.y+R.h+3,(doc.sheet.mirror?'ÄNDVY (VÄND 180°)   SKALA ':'ÄNDVY   SKALA ')+fmtScale(s),2.8,{bold:true});return o}
+
+function isoView(){
+  const R=sheetLayout().iso;if(!doc.closed||doc.pts.length<3)return sText(R.x+R.w/2,R.y+R.h/2,'Stäng profilen för att se 3D-vyn',2.8,{anchor:'middle'});
+  let D=densePts(doc.pts,true);if(area(D)<0)D=D.slice().reverse();const b=bbox(D);const W=b.maxX-b.minX,H=b.maxY-b.minY;
+  const Dm=2.6*Math.max(W,H);
+  /* riktig parallellprojektion: vriden 35° och sedd 25° uppifrån, så att ändytan förkortas som i verkligheten */
+  const th=35*Math.PI/180,ph=25*Math.PI/180,ct=Math.cos(th),st=Math.sin(th),cp=Math.cos(ph),sp=Math.sin(ph);
+  const pr=(p,z)=>{const z1=-p.x*st+z*ct;return P2(p.x*ct+z*st,p.y*cp+z1*sp)};const all=[];D.forEach(p=>{all.push(pr(p,0),pr(p,Dm))});const pb=bbox(all);
+  const s=Math.min((R.w-10)/(pb.maxX-pb.minX),(R.h-10)/(pb.maxY-pb.minY));const ox=R.x+(R.w-(pb.maxX-pb.minX)*s)/2,oy=R.y+(R.h-6-(pb.maxY-pb.minY)*s)/2;
+  const Tq=q=>P2(ox+(q.x-pb.minX)*s,oy+(pb.maxY-q.y)*s);const pt=q=>{const t=Tq(q);return f3(t.x)+' '+f3(t.y)};
+  const n=D.length,faces=[];const vd=P2(st*cp,sp);const light=nrm(P2(0.35,1));
+  for(let i=0;i<n;i++){const a=D[i],c=D[(i+1)%n];const d=nrm(sub(c,a));const nn=P2(d.y,-d.x);if(dot(nn,vd)<=1e-9)continue;
+    faces.push({i,a,c,depth:dot(mul(add(a,c),.5),vd),sh:0.72+0.28*Math.max(0,dot(nn,light))})}
+  /* ritordning: en sida som ligger framför en annan (sett i betraktarens riktning) ritas sist, så att den skymmer det bakomliggande.
+     Räknas med strålar i profilplanet – säkrare än att bara sortera på mittpunkt (som gav genomlysande spårväggar). */
+  faces.sort((p,q)=>p.depth-q.depth);
+  {const hit=(o0,dir,a,c)=>{const e=sub(c,a);const den=crs(dir,e);if(Math.abs(den)<1e-12)return false;const w=sub(a,o0);const t=crs(w,e)/den,u2=crs(w,dir)/den;return t>1e-6&&u2>=-1e-9&&u2<=1+1e-9};
+   const nF=faces.length,inF=new Array(nF).fill(0),adj=faces.map(()=>[]);
+   for(let j=0;j<nF;j++)for(let i=0;i<nF;i++){if(i===j)continue;const fj=faces[j],fi=faces[i];
+     if([0.15,0.5,0.85].some(t=>hit(add(fj.a,mul(sub(fj.c,fj.a),t)),vd,fi.a,fi.c))){adj[j].push(i);inF[i]++}}
+   const out=[],used=new Array(nF).fill(false);
+   for(let k=0;k<nF;k++){let pick=-1;for(let i=0;i<nF;i++)if(!used[i]&&inF[i]===0){pick=i;break}if(pick<0)for(let i=0;i<nF;i++)if(!used[i]){pick=i;break}
+     used[pick]=true;out.push(faces[pick]);adj[pick].forEach(i=>inF[i]--)}
+   faces.splice(0,nF,...out)}
+  let o='';
+  /* Fingerskarv: skarvytan z = z0 + A*tri(u/p). Vertikal: u längs bredden (fingrarna syns på flatsidan, rak linje på kanten).
+     Horisontell: u längs tjockleken (fingrarna syns på kanten, rak linje på flatsidan). */
+  const fm=doc.finger,wideX=W>=H,fp=6,fA=6,zj=[0.5*Dm];
+  const fu=q=>(fm==='vertikal')===wideX?q.x:q.y;const tri=v=>1-4*Math.abs(v-Math.round(v));
+  const joint=(a,c)=>{if(!fm)return '';let out='';const ua=fu(a),uc=fu(c);const us=[ua];
+    if(Math.abs(uc-ua)>1e-6){const lo=Math.min(ua,uc),hi=Math.max(ua,uc);let k=Math.ceil(lo/(fp/2)+1e-9);const mid=[];for(;k*(fp/2)<hi-1e-9;k++)mid.push(k*fp/2);if(uc<ua)mid.reverse();us.push(...mid)}
+    us.push(uc);
+    const flat=Math.abs(uc-ua)<=1e-6;zj.forEach(z0=>{out+='<path d="M'+us.map((u,ix)=>{const t=flat?(ix?1:0):(u-ua)/(uc-ua);const q=add(a,mul(sub(c,a),t));return pt(pr(q,z0+fA*tri(u/fp)))}).join('L')+'" stroke="#000" stroke-width="0.25" fill="none" stroke-linejoin="miter"/>'});
+    return out};
+  const col=sh=>`rgb(${Math.round(226*sh)},${Math.round(206*sh)},${Math.round(170*sh)})`;
+  /* vilken sida i profilen hör ytan till: rak sida mellan två hörngrupper i den täta punktlistan */
+  const NP=doc.pts.length;const edgeOf=(p,q)=>{if(p.vj===undefined||q.vj===undefined||p.vj===q.vj)return null;if((p.vj+1)%NP===q.vj)return p.vj;if((q.vj+1)%NP===p.vj)return q.vj;return null};
+  const lerp=(a,c,t)=>add(a,mul(sub(c,a),t));
+  const tex=(f,c)=>{const e=edgeOf(f.a,f.c);if(e==null)return '';const kind=doc.pts[e].s;if(!kind||kind==='hyvlad')return '';
+    const W2=len(sub(f.c,f.a));if(W2<0.3)return '';let d='';const dark=`rgba(60,40,20,.55)`;
+    if(kind==='rillad'){/* rillor = spår längs biten */const nr=Math.max(2,Math.round(W2*s/1.4));/* ca 1,4 mm mellan rillorna på papperet */for(let k=1;k<nr;k++){const q=lerp(f.a,f.c,k/nr);d+='M'+pt(pr(q,0))+'L'+pt(pr(q,Dm))}
+      return `<path d="${d}" stroke="${dark}" stroke-width="0.14" fill="none"/>`}
+    const fine=kind==='paintcutter';const cnt=Math.round((fine?70:42)*Math.min(1,0.4+W2/60));let seed=e*131+7;
+    for(let k=0;k<cnt;k++){const z=Dm*(k+0.3+0.4*rnd(seed+k*3))/cnt;const t1=rnd(seed+k*5+1)*(fine?0.7:0.5),t2=Math.min(1,t1+(fine?0.15:0.25)+rnd(seed+k*7+2)*(fine?0.25:0.5));const dz=(rnd(seed+k*11)-0.5)*(fine?0.6:1.6);
+      d+='M'+pt(pr(lerp(f.a,f.c,t1),z))+'L'+pt(pr(lerp(f.a,f.c,t2),z+dz))}
+    return `<path d="${d}" stroke="${dark}" stroke-width="${fine?0.1:0.16}" fill="none" stroke-linecap="round"/>`};
+  faces.forEach(f=>{const c=col(f.sh);const A0=pr(f.a,0),C0=pr(f.c,0),C1=pr(f.c,Dm),A1=pr(f.a,Dm);
+    o+=`<path d="M${pt(A0)}L${pt(C0)}L${pt(C1)}L${pt(A1)}Z" fill="${c}" stroke="${c}" stroke-width="0.12"/>`;o+=tex(f,c);
+    o+=`<path d="M${pt(A1)}L${pt(C1)}" stroke="#000" stroke-width="0.3" fill="none"/>`;
+    o+=joint(f.a,f.c);
+    const nextI=(f.i+1)%n;if(!D[f.i].inter)o+=`<path d="M${pt(A0)}L${pt(A1)}" stroke="#000" stroke-width="0.3" fill="none"/>`;
+    if(!D[nextI].inter)o+=`<path d="M${pt(C0)}L${pt(C1)}" stroke="#000" stroke-width="0.3" fill="none"/>`});
+  o+=`<path d="M${D.map(p=>pt(pr(p,0))).join('L')}Z" fill="rgb(240,226,200)" stroke="#000" stroke-width="0.45" stroke-linejoin="round"/>`;
+  o+=sText(ox,oy+(pb.maxY-pb.minY)*s+5,'3D-VY'+(fm?'  –  FINGERSKARV '+fm.toUpperCase():''),2.8,{bold:true});return o}
+
+function renderSheet(){
+  let s=`<defs><pattern id="hatch" patternUnits="userSpaceOnUse" width="1.8" height="1.8" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="1.8" stroke="#000" stroke-width="0.13"/></pattern></defs>`;
+  s+=`<rect x="0" y="0" width="297" height="210" fill="#fff"/>`+sRect(10,10,277,190,0.5);
+  sheetScaleText='';let views='';
+  const origP=doc.pts,origH=doc.hidden;
+  try{if(doc.sheet.mirror&&origP.length>=2){const b=bbox(origP);doc.pts=origP.map(p=>Object.assign({},p,{x:r6(b.minX+b.maxX-p.x),y:r6(b.minY+b.maxY-p.y)}));doc.hidden=(origH||[]).map(k=>mirrorKey(k,b))}
+    if(doc.pts.length>=2){views+=profileView()+isoView();const L=sheetLayout();if(L.mont)views+=montView(L.mont)}
+    else views+=sText(148,95,'Ingen profil ritad ännu',4,{anchor:'middle'})}
+  finally{doc.pts=origP;doc.hidden=origH}
+  if(doc.kutter.show)views+=kutterTable();
+  s+=views+titleBlock();$('#sheet').innerHTML=s}
+
+/* ===================== Flikar, rendering ===================== */
+function showTab(t){ui.tab=t;$('#tabDraw').classList.toggle('on',t==='draw');$('#tabSheet').classList.toggle('on',t==='sheet');
+  $('#drawView').hidden=t!=='draw';$('#sheetView').hidden=t!=='sheet';if(t==='sheet')renderSheet();else renderCanvas()}
+$('#tabDraw').onclick=()=>showTab('draw');$('#tabSheet').onclick=()=>showTab('sheet');
+function renderAll(){renderCanvas();renderTable();if(ui.tab==='sheet')renderSheet();$('#undo').disabled=!undoS.length;$('#redo').disabled=!redoS.length}
+window.addEventListener('resize',()=>renderCanvas());
+
+/* ===================== 3D-utskrift (3MF + STL) ===================== */
+/* Tät kontur med radier uppdelade så att avvikelsen från den sanna bågen är högst 0,005 mm */
+function printOutline(P){const ds=filletDs(P,true),out=[];
+  P.forEach((p,j)=>{const f=filletAt(P,true,j,ds);if(!f){out.push(P2(p.x,p.y));return}if(f.chamfer){out.push(P2(f.T1.x,f.T1.y),P2(f.T2.x,f.T2.y));return}
+    const a1=Math.atan2(f.T1.y-f.C.y,f.T1.x-f.C.x),a2=Math.atan2(f.T2.y-f.C.y,f.T2.x-f.C.x);let da=a2-a1;while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
+    const step=2*Math.acos(Math.max(-1,1-0.005/f.r));const N=Math.max(4,Math.ceil(Math.abs(da)/step));
+    for(let k=0;k<=N;k++){const a=a1+da*k/N;out.push(P2(f.C.x+f.r*Math.cos(a),f.C.y+f.r*Math.sin(a)))}});
+  const q=[];out.forEach(p=>{if(!q.length||len(sub(p,q[q.length-1]))>1e-6)q.push(p)});if(q.length>2&&len(sub(q[0],q[q.length-1]))<1e-6)q.pop();
+  /* ta bort punkter mitt på raka linjer */
+  let ch=true;while(ch&&q.length>3){ch=false;for(let i=0;i<q.length;i++){const a=q[(i-1+q.length)%q.length],b=q[i],c=q[(i+1)%q.length];if(Math.abs(crs(sub(b,a),sub(c,b)))<1e-9&&dot(sub(b,a),sub(c,b))>0){q.splice(i,1);ch=true;break}}}
+  return q}
+function earClip(poly){/* poly moturs. Returnerar trianglar som index */const idx=poly.map((_,i)=>i),tris=[];let guard=0;
+  const inTri=(p,a,b,c)=>{const d1=crs(sub(b,a),sub(p,a)),d2=crs(sub(c,b),sub(p,b)),d3=crs(sub(a,c),sub(p,c));return d1>=-1e-12&&d2>=-1e-12&&d3>=-1e-12};
+  while(idx.length>3&&guard++<100000){let found=false;
+    for(let k=0;k<idx.length;k++){const ia=idx[(k-1+idx.length)%idx.length],ib=idx[k],ic=idx[(k+1)%idx.length];const a=poly[ia],b=poly[ib],c=poly[ic];
+      if(crs(sub(b,a),sub(c,b))<=1e-12)continue;
+      let ok=true;for(const j of idx){if(j===ia||j===ib||j===ic)continue;const p=poly[j];if((len(sub(p,a))<1e-9)||(len(sub(p,b))<1e-9)||(len(sub(p,c))<1e-9))continue;if(inTri(p,a,b,c)){ok=false;break}}
+      if(ok){tris.push([ia,ib,ic]);idx.splice(k,1);found=true;break}}
+    if(!found)return null}
+  if(idx.length===3)tris.push([idx[0],idx[1],idx[2]]);return tris}
+function buildMesh(L){if(!doc.closed||doc.pts.length<3)return {err:'Profilen måste vara stängd.'};
+  let poly=printOutline(doc.pts);if(area(poly)<0)poly=poly.slice().reverse();const b=bbox(poly);poly=poly.map(p=>P2(r6(p.x-b.minX),r6(p.y-b.minY)));
+  const tris=earClip(poly);if(!tris)return {err:'Profilen korsar sig själv någonstans – rätta ritningen först.'};
+  const n=poly.length,V=[],F=[];poly.forEach(p=>V.push([p.x,p.y,0]));poly.forEach(p=>V.push([p.x,p.y,L]));
+  tris.forEach(([a,b2,c])=>{F.push([a,c,b2]);F.push([n+a,n+b2,n+c])});
+  for(let i=0;i<n;i++){const j=(i+1)%n;F.push([i,j,n+j]);F.push([i,n+j,n+i])}
+  return {V,F,w:b.maxX-b.minX,h:b.maxY-b.minY,area:area(poly)}}
+function make3MF(m){const v=m.V.map(p=>`<vertex x="${p[0]}" y="${p[1]}" z="${p[2]}"/>`).join(''),t=m.F.map(f=>`<triangle v1="${f[0]}" v2="${f[1]}" v3="${f[2]}"/>`).join('');
+  const name=esc(doc.title.benamning||'Profil');
+  return {'[Content_Types].xml':'<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>',
+    '_rels/.rels':'<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>',
+    '3D/3dmodel.model':`<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="sv-SE" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Title">${name}</metadata><metadata name="Application">NT Ritverktyg</metadata><resources><object id="1" type="model" name="${name}"><mesh><vertices>${v}</vertices><triangles>${t}</triangles></mesh></object></resources><build><item objectid="1"/></build></model>`}}
+function makeSTL(m){const buf=new ArrayBuffer(84+m.F.length*50),dv=new DataView(buf);const hdr='NT Ritverktyg - enhet mm';for(let i=0;i<hdr.length;i++)dv.setUint8(i,hdr.charCodeAt(i));dv.setUint32(80,m.F.length,true);
+  let o=84;m.F.forEach(f=>{const a=m.V[f[0]],b=m.V[f[1]],c=m.V[f[2]];const u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],w=[c[0]-a[0],c[1]-a[1],c[2]-a[2]];let nx=u[1]*w[2]-u[2]*w[1],ny=u[2]*w[0]-u[0]*w[2],nz=u[0]*w[1]-u[1]*w[0];const l=Math.hypot(nx,ny,nz)||1;
+    [nx/l,ny/l,nz/l,...a,...b,...c].forEach(x=>{dv.setFloat32(o,x,true);o+=4});dv.setUint16(o,0,true);o+=2});return new Uint8Array(buf)}
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRC[(c^u8[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+function makeZip(files){/* okomprimerad zip (store) */const enc=new TextEncoder();const parts=[],cent=[];let off=0;
+  Object.entries(files).forEach(([name,data])=>{const nb=enc.encode(name),d=typeof data==='string'?enc.encode(data):data,crc=crc32(d);
+    const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(8,0,true);h.setUint32(14,crc,true);h.setUint32(18,d.length,true);h.setUint32(22,d.length,true);h.setUint16(26,nb.length,true);
+    parts.push(new Uint8Array(h.buffer),nb,d);
+    const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint32(16,crc,true);c.setUint32(20,d.length,true);c.setUint32(24,d.length,true);c.setUint16(28,nb.length,true);c.setUint32(42,off,true);
+    cent.push(new Uint8Array(c.buffer),nb);off+=30+nb.length+d.length});
+  const cs=cent.reduce((a,x)=>a+x.length,0);const e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);const cnt=Object.keys(files).length;e.setUint16(8,cnt,true);e.setUint16(10,cnt,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...cent,new Uint8Array(e.buffer)],{type:'application/zip'})}
+function zipBytes(files){return makeZip(files)}
+async function export3D(){const L=num($('#prLen').value);if(!(L>0&&L<=1000)){toast('Ange en längd mellan 0 och 1000 mm.');return}
+  const m=buildMesh(L);if(m.err){toast(m.err,4000);return}
+  const base=fileBase()+'_'+fmt(L).replace(',','.')+'mm';const tm=make3MF(m);
+  const inner3mf=makeZip(tm);const u8=new Uint8Array(await inner3mf.arrayBuffer());
+  const readme='3D-utskrift från NT Ritverktyg\r\n\r\nProfil: '+(doc.title.benamning||'')+'\r\nMått: '+fmt(m.w)+' x '+fmt(m.h)+' mm, längd '+fmt(L)+' mm\r\nEnhet: millimeter\r\n\r\n'+base+'.3mf  - öppna i Bambu Studio (enheten mm följer med i filen)\r\n'+base+'.stl  - samma modell som STL (enhet mm)\r\n\r\nProfilen ligger på bordet med längden uppåt (Z).\r\nKontrollera i slicern att storleken är '+fmt(m.w)+' x '+fmt(m.h)+' x '+fmt(L)+' mm och att skalan är 100 %.\r\n';
+  const z=makeZip({[base+'.3mf']:u8,[base+'.stl']:makeSTL(m),'LASMIG.txt':readme});
+  $('#prInfo').textContent='Senast: '+fmt(m.w)+' × '+fmt(m.h)+' × '+fmt(L)+' mm, '+m.F.length+' trianglar.';
+  await saveFile(base+'.zip',z,'application/zip')}
+$('#prBtn').onclick=export3D;
+
+/* ===================== Spara / exportera ===================== */
+let DL=null;
+(async()=>{try{if(window.claude&&typeof window.claude.use==='function')DL=await window.claude.use('downloads')}catch(e){DL=null}})();
+function fileBase(){const t=doc.title;const b=(t.ritnr||t.benamning||'ritning').replace(/[^\wåäöÅÄÖ\- ]+/g,'').trim().replace(/\s+/g,'_');return b||'ritning'}
+async function saveFile(name,data,mime){
+  if(DL){try{await DL.save({filename:name,data});toast('Sparad: '+name);return}catch(e){const c=e&&e.code;if(c==='declined')return;if(c==='rate_limited'){toast('Vänta lite och försök igen.');return}if(c==='host_unavailable'){toast('Den här appen kan inte spara filer – öppna sidan i en webbläsare.');return}}}
+  try{const blob=data instanceof Blob?data:new Blob([data],{type:mime||'application/octet-stream'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);
+    if(!window.ntDesktop)toast('Om inget laddades ned: öppna verktyget i en egen flik.')}catch(e){toast('Kunde inte spara filen här.')}}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error(src));document.head.appendChild(s)})}
+let libs=null;
+/* I datorprogrammet ligger biblioteken lokalt (vendor/) så att PDF fungerar utan internet. I webbläsaren hämtas de från nätet om de inte finns lokalt. */
+async function loadLib(local,cdn){try{await loadScript(local)}catch(e){await loadScript(cdn)}}
+function loadLibs(){if(!libs)libs=(async()=>{if(!window.jspdf)await loadLib('vendor/jspdf.umd.min.js','https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js');
+  if(!window.svg2pdf)await loadLib('vendor/svg2pdf.umd.min.js','https://cdn.jsdelivr.net/npm/svg2pdf.js@2.9.0/dist/svg2pdf.umd.min.js')})().catch(e=>{libs=null;throw e});return libs}
+async function exportPDF(){
+  if(doc.pts.length<2){toast('Rita en profil först.');return}
+  const btn=$('#expPdf');btn.disabled=true;btn.textContent='Skapar PDF…';
+  try{showTab('sheet');await loadLibs();const {jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const el=$('#sheet');if(typeof pdf.svg==='function')await pdf.svg(el,{x:0,y:0,width:297,height:210});else await window.svg2pdf.svg2pdf(el,pdf,{x:0,y:0,width:297,height:210});
+    pdf.setProperties({title:doc.title.benamning||'Ritning',creator:'NT Ritverktyg'});
+    await saveFile(fileBase()+'.pdf',new Blob([pdf.output('arraybuffer')],{type:'application/pdf'}),'application/pdf')}
+  catch(e){console.error(e);toast('PDF kunde inte skapas ('+(e.message||e)+'). Prova SVG i stället.',5000)}
+  finally{btn.disabled=false;btn.textContent='Spara PDF'}}
+$('#expPdf').onclick=exportPDF;
+$('#expSvg').onclick=()=>{renderSheet();const x='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString($('#sheet'));saveFile(fileBase()+'.svg',x,'image/svg+xml')};
+async function exportPNG(){if(doc.pts.length<2){toast('Rita en profil först.');return}
+  renderSheet();const DPI=300,W=Math.round(297/25.4*DPI),H=Math.round(210/25.4*DPI);
+  const el=$('#sheet').cloneNode(true);el.setAttribute('width',W);el.setAttribute('height',H);el.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  const url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(el)],{type:'image/svg+xml'}));
+  try{const img=new Image();await new Promise((res,rej)=>{img.onload=res;img.onerror=()=>rej(new Error('bilden kunde inte ritas'));img.src=url});
+    const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,W,H);g.drawImage(img,0,0,W,H);
+    const blob=await new Promise(r=>cv.toBlob(r,'image/png'));if(!blob)throw new Error('tom bild');await saveFile(fileBase()+'.png',blob,'image/png')}
+  catch(e){console.error(e);toast('PNG kunde inte skapas ('+(e.message||e)+').',5000)}finally{URL.revokeObjectURL(url)}}
+$('#expPng').onclick=exportPNG;
+$('#expJson').onclick=()=>saveFile(fileBase()+'.json',JSON.stringify(doc,null,2),'application/json');
+$('#impJson').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const d=JSON.parse(await f.text());if(!validDoc(d))throw 0;beginChange();loadDoc(d);changed();showTab(ui.tab);fitView();toast('Ritningen är inläst.')}catch(_){toast('Filen kunde inte läsas som en ritning.')}});
+
+/* utkast */
+function getDrafts(){try{return JSON.parse(store.get('ntrit.drafts')||'[]')}catch(e){return []}}
+function renderDrafts(){const d=getDrafts();$('#drafts').innerHTML=d.length?d.map((x,i)=>`<li><span title="${esc(x.name)}">${esc(x.name)}<br><small>${esc(x.saved)}</small></span><button class="btn" data-o="${i}">Öppna</button><button class="x" data-d="${i}" title="Ta bort">×</button></li>`).join(''):'<li class="small">Inga sparade utkast.</li>'}
+$('#saveDraft').onclick=()=>{const d=getDrafts();const name=doc.title.benamning||doc.title.ritnr||'Namnlös ritning';const now=new Date();const saved=today()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const i=d.findIndex(x=>x.name===name);const item={name,saved,doc:JSON.parse(JSON.stringify(doc))};if(i>=0)d[i]=item;else d.unshift(item);
+  if(store.set('ntrit.drafts',JSON.stringify(d.slice(0,40)))){renderDrafts();toast('Utkastet är sparat i den här webbläsaren.')}else toast('Kunde inte spara här – använd JSON-export.')};
+$('#drafts').addEventListener('click',async e=>{const o=e.target.closest('[data-o]'),x=e.target.closest('[data-d]');const d=getDrafts();
+  if(o){beginChange();loadDoc(d[+o.dataset.o].doc);changed();fitView()}
+  if(x&&await ask('Ta bort utkastet "'+d[+x.dataset.d].name+'"?','Ta bort')){d.splice(+x.dataset.d,1);store.set('ntrit.drafts',JSON.stringify(d));renderDrafts()}});
+$('#newDoc').onclick=async()=>{if(doc.pts.length&&!(await ask('Börja en ny ritning? Nuvarande försvinner om du inte sparat den som utkast.','Ny ritning')))return;beginChange();loadDoc(newDoc());changed();fitView();setTool('draw')};
+
+/* ===================== Start ===================== */
+(function init(){let d=null;try{d=JSON.parse(store.get('ntrit.current')||'null')}catch(e){}
+  loadDoc(validDoc(d)&&d.pts.length?d:demoDoc());setTool(doc.pts.length?'select':'draw');renderDrafts();
+  requestAnimationFrame(()=>{fitView();renderAll()})})();
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+{
+  "name": "nt-draw",
+  "productName": "NT Draw",
+  "version": "1.0.0",
+  "description": "Ritverktyg för träprofiler – Norsjö Trä AB",
+  "author": "Norsjö Trä AB",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "prepare-build": "node scripts/prepare.js",
+    "start": "node scripts/prepare.js && electron .",
+    "dist": "node scripts/prepare.js && electron-builder --win --publish never",
+    "release": "node scripts/prepare.js && electron-builder --win --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  },
+  "devDependencies": {
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0",
+    "jspdf": "4.2.1",
+    "svg2pdf.js": "2.9.0"
+  },
+  "build": {
+    "appId": "se.norsjotra.ntdraw",
+    "productName": "NT Draw",
+    "copyright": "Norsjö Trä AB",
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "NT-Draw-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NT Draw"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "releaseType": "release"
+      }
+    ]
+  }
+}
