@@ -1,7 +1,7 @@
 # Bygger Windows-installationen och lägger upp den som en GitHub Release.
 # Starta den under fliken Actions → "Bygg och publicera" → Run workflow.
 # Releasen får versionen i package.json (t.ex. v1.0.1) – höj den innan varje ny utgåva.
-name: Bygg och publicera
+name: .github/workflows/
 
 on:
   workflow_dispatch:
